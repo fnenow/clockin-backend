@@ -1,6 +1,18 @@
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
+const bodyParser = require('body-parser');
+const cheerio = require('cheerio');
+const { DateTime } = require('luxon');
+// Use California time (America/Los_Angeles), subtract 2 minutes
+const receivedTime = DateTime.now()
+  .setZone('America/Los_Angeles')
+  .minus({ minutes: 2 });
+
+const clockDate = receivedTime.toFormat('yyyy-MM-dd');      // e.g. 2025-04-11
+const clockTime = receivedTime.toFormat('HH:mm:ss');        // e.g. 13:28:00
+
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
