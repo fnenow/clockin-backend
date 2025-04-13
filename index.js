@@ -4,13 +4,6 @@ const port = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
 const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
-// Use California time (America/Los_Angeles), subtract 2 minutes
-const receivedTime = DateTime.now()
-  .setZone('America/Los_Angeles')
-  .minus({ minutes: 2 });
-
-const clockDate = receivedTime.toFormat('yyyy-MM-dd');      // e.g. 2025-04-11
-const clockTime = receivedTime.toFormat('HH:mm:ss');        // e.g. 13:28:00
 const { Pool } = require('pg');
 
 const pool = new Pool({
@@ -20,17 +13,66 @@ const pool = new Pool({
   }
 });
 
-
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post('/email', (req, res) => {
-  console.log('📩 Email received!');
-  console.log('From:', req.body.from);
-  console.log('Subject:', req.body.subject);
-  console.log('Body:', req.body['body-plain']);
-  res.status(200).send('Email received successfully!');
+app.post('/email', async (req, res) => {
+  try {
+    console.log('📩 Email received!');
+    console.log('From:', req.body.from);
+    console.log('Subject:', req.body.subject);
+    console.log('Body:', req.body['body-plain']);
+
+    const html = req.body['body-html'] || '';
+    const $ = cheerio.load(html);
+    const fullText = $('body').text();
+
+    const phoneMatch = fullText.match(/From:\s*\((\d{3})\)\s*(\d{3})-(\d{4})/);
+    const phoneNumber = phoneMatch ? `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}` : 'Unknown';
+
+    const messageMatch = fullText.match(/Message:\s*(Clock (in|out).*)/i);
+    const message = messageMatch ? messageMatch[1] : 'Unknown';
+    const action = message.toLowerCase().includes('out') ? 'Clock out' : 'Clock in';
+
+    const projectMatch = message.match(/project\s+([^\n\r]+)/i);
+    const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
+
+    const noteMatch = message.match(/note\s*:\s*([^\n\r]+)/i);
+    const note = noteMatch ? noteMatch[1].trim() : '';
+
+    const receivedTime = DateTime.now()
+      .setZone('America/Los_Angeles')
+      .plus(action === 'Clock out' ? { minutes: 2 } : { minutes: -2 });
+
+    const utcDateTime = receivedTime.toUTC();
+    const pstDateTime = receivedTime.setZone('America/Los_Angeles');
+
+    const workerName = phoneNumber; // You can replace this with a lookup later
+
+    await pool.query(`
+      INSERT INTO clock_entries (
+        phone_number, worker_name, project_name, action,
+        datetime_utc, datetime_pst, day, month, year, time, note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `, [
+      phoneNumber,
+      workerName,
+      projectName,
+      action,
+      utcDateTime.toISO(),
+      pstDateTime.toISO(),
+      pstDateTime.day,
+      pstDateTime.month,
+      pstDateTime.year,
+      pstDateTime.toFormat('HH:mm'),
+      note
+    ]);
+
+    res.status(200).send('Email received and data saved!');
+  } catch (err) {
+    console.error('❌ Error handling email:', err);
+    res.status(500).send('Server error');
+  }
 });
 
 app.get('/', (req, res) => {
@@ -40,23 +82,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
-
-await pool.query(`
-  INSERT INTO clock_entries (
-    phone_number, worker_name, project_name, action,
-    datetime_utc, datetime_pst, day, month, year, time, note
-  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-`, [
-  phoneNumber,
-  workerName,
-  projectName,
-  action, // "Clock in" or "Clock out"
-  utcDateTime.toISO(),
-  pstDateTime.toISO(),
-  pstDateTime.day,
-  pstDateTime.month,
-  pstDateTime.year,
-  pstDateTime.toFormat('HH:mm'),
-  note // Optional field
-]);
-
