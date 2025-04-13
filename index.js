@@ -12,7 +12,7 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
-console.log('Database_PUBLIC_URL:', process.env.DATABASE_PUBLIC_URL);
+console.log('DATABASE_PUBLIC_URL:', process.env.DATABASE_PUBLIC_URL);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
