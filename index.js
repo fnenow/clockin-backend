@@ -12,6 +12,7 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
+console.log('Database URL:', process.env.DATABASE_URL);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
