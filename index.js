@@ -1,10 +1,11 @@
 const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
 const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
 const { Pool } = require('pg');
+
+const app = express();
+const port = process.env.PORT || 8080;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -12,41 +13,11 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
+
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
-pool.connect()
-  .then(() => {
-    console.log('✅ Connected to the database!');
-
-    const express = require('express');
-    const app = express();
-    app.use(express.json());
-
-    // your route handlers here...
-
-    app.listen(8080, () => {
-      console.log('Server listening on port 8080');
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Database connection error:', err);
-    process.exit(1); // force crash if DB can't connect
-  });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-   // your route handlers here...
-
-    app.listen(8080, () => {
-      console.log('Server listening on port 8080');
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Database connection error:', err);
-    process.exit(1); // force crash if DB can't connect
-  });
-
-
 
 app.post('/email', async (req, res) => {
   try {
@@ -111,6 +82,14 @@ app.get('/', (req, res) => {
   res.send('✅ Clock-in backend is live!');
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
+pool.connect()
+  .then(() => {
+    console.log('✅ Connected to the database!');
+    app.listen(port, () => {
+      console.log(`🚀 Server listening on port ${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Database connection error:', err);
+    process.exit(1);
+  });
