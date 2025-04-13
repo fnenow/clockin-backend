@@ -11,6 +11,14 @@ const receivedTime = DateTime.now()
 
 const clockDate = receivedTime.toFormat('yyyy-MM-dd');      // e.g. 2025-04-11
 const clockTime = receivedTime.toFormat('HH:mm:ss');        // e.g. 13:28:00
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 
 
@@ -32,3 +40,23 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+
+await pool.query(`
+  INSERT INTO clock_entries (
+    phone_number, worker_name, project_name, action,
+    datetime_utc, datetime_pst, day, month, year, time, note
+  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+`, [
+  phoneNumber,
+  workerName,
+  projectName,
+  action, // "Clock in" or "Clock out"
+  utcDateTime.toISO(),
+  pstDateTime.toISO(),
+  pstDateTime.day,
+  pstDateTime.month,
+  pstDateTime.year,
+  pstDateTime.toFormat('HH:mm'),
+  note // Optional field
+]);
+
