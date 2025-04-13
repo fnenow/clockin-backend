@@ -17,6 +17,19 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+   // your route handlers here...
+
+    app.listen(8080, () => {
+      console.log('Server listening on port 8080');
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Database connection error:', err);
+    process.exit(1); // force crash if DB can't connect
+  });
+
+
+
 app.post('/email', async (req, res) => {
   try {
     console.log('📩 Email received!');
