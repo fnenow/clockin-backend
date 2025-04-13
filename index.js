@@ -7,12 +7,12 @@ const { DateTime } = require('luxon');
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_PUBLIC_URL,
   ssl: {
     rejectUnauthorized: false
   }
 });
-console.log('Database URL:', process.env.DATABASE_URL);
+console.log('Database PUBLIC URL:', process.env.DATABASE_PUBLIC_URL);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
