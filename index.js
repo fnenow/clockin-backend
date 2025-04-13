@@ -14,6 +14,24 @@ const pool = new Pool({
 });
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
+pool.connect()
+  .then(() => {
+    console.log('✅ Connected to the database!');
+
+    const express = require('express');
+    const app = express();
+    app.use(express.json());
+
+    // your route handlers here...
+
+    app.listen(8080, () => {
+      console.log('Server listening on port 8080');
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Database connection error:', err);
+    process.exit(1); // force crash if DB can't connect
+  });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
