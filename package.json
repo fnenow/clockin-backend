@@ -1,14 +1,21 @@
 {
   "name": "clockin-backend",
   "version": "1.0.0",
+  "description": "Clock-in backend for processing SMS/email time entries",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "engines": {
+    "node": ">=16"
+  },
   "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
     "express": "^4.18.2",
     "luxon": "^3.4.3",
-    "cheerio": "^1.0.0-rc.12",
     "pg": "^8.11.1"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
