@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
 const { Pool } = require('pg');
-const path = require('path');  // For serving static files
+const path = require('path');
 const basicAuth = require('express-basic-auth'); // ✅ ADD THIS LINE
 
 const app = express();
@@ -49,7 +49,6 @@ app.post('/email', async (req, res) => {
     const message = messageMatch ? messageMatch[1] : 'Unknown';
     const action = message.toLowerCase().includes('out') ? 'Clock out' : 'Clock in';
 
-    // ✅ Updated: search in fullText instead of message
     const projectMatch = fullText.match(/Project:\s*(.+)/i);
     const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
 
@@ -63,7 +62,7 @@ app.post('/email', async (req, res) => {
     const utcDateTime = receivedTime.toUTC();
     const pstDateTime = receivedTime.setZone('America/Los_Angeles');
 
-    const workerName = phoneNumber; // You can replace this with a lookup later
+    const workerName = phoneNumber;
 
     await pool.query(`
       INSERT INTO clock_entries (
@@ -85,7 +84,6 @@ app.post('/email', async (req, res) => {
     ]);
 
     console.log(`✅ Inserted clock entry for project: ${projectName}`);
-
     res.status(200).send('Email received and data saved!');
   } catch (err) {
     console.error('❌ Error handling email:', err);
@@ -95,11 +93,6 @@ app.post('/email', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.send('✅ Clock-in backend is live!');
-});
-
-// Serve static files for dashboard from 'dashboard' folder (protected by basic auth)
-app.get('/dashboard', dashboardAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
 });
 
 pool.connect()
