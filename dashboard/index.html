@@ -47,7 +47,9 @@
   <div class="filters">
     <label>
       Worker:
-      <input type="text" id="workerFilter" placeholder="Enter name or phone" />
+      <select id="workerFilter">
+        <option value="">All Workers</option>
+      </select>
     </label>
     <label>
       Project:
@@ -92,16 +94,30 @@
         if (!response.ok) throw new Error('Failed to fetch clock entries');
         allClockEntries = await response.json();
 
-        populateProjectDropdown();
+        populateDropdowns();
         applyFilters();
       } catch (error) {
         console.error('Error fetching clock entries:', error);
       }
     }
 
-    function populateProjectDropdown() {
+    function populateDropdowns() {
+      const workerDropdown = document.getElementById('workerFilter');
       const projectDropdown = document.getElementById('projectFilter');
+
+      const uniqueWorkers = [...new Set(allClockEntries.map(entry => entry.worker_name))];
       const uniqueProjects = [...new Set(allClockEntries.map(entry => entry.project_name))];
+
+      // Populate Worker Dropdown
+      workerDropdown.innerHTML = '<option value="">All Workers</option>';
+      uniqueWorkers.forEach(worker => {
+        const option = document.createElement('option');
+        option.value = worker;
+        option.textContent = worker;
+        workerDropdown.appendChild(option);
+      });
+
+      // Populate Project Dropdown
       projectDropdown.innerHTML = '<option value="">All Projects</option>';
       uniqueProjects.forEach(project => {
         const option = document.createElement('option');
@@ -112,7 +128,7 @@
     }
 
     function applyFilters() {
-      const workerFilter = document.getElementById('workerFilter').value.toLowerCase();
+      const workerFilter = document.getElementById('workerFilter').value;
       const projectFilter = document.getElementById('projectFilter').value;
       const startDate = document.getElementById('startDate').value;
       const endDate = document.getElementById('endDate').value;
@@ -121,7 +137,7 @@
       tableBody.innerHTML = '';
 
       const filteredEntries = allClockEntries.filter(entry => {
-        const workerMatch = !workerFilter || entry.worker_name.toLowerCase().includes(workerFilter) || entry.phone_number.includes(workerFilter);
+        const workerMatch = !workerFilter || entry.worker_name === workerFilter;
         const projectMatch = !projectFilter || entry.project_name === projectFilter;
         const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
         const startMatch = !startDate || entryDate >= startDate;
