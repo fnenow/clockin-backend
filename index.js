@@ -4,36 +4,35 @@ const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
 const { Pool } = require('pg');
 const path = require('path');
-const basicAuth = require('express-basic-auth'); // ✅ ADD THIS LINE
-const dashboardAuth = basicAuth({
-  users: { [process.env.DASHBOARD_USER]: process.env.DASHBOARD_PASS },
-  challenge: true
-});
+const basicAuth = require('express-basic-auth');
 
 const app = express();
 const port = process.env.PORT || 8080;
 
+// ✅ Set up database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false }
 });
-
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
-// ✅ NEW: Basic Auth Middleware
-app.use('/dashboard', basicAuth({
-  users: { 'admin': process.env.DASHBOARD_PASSWORD }, // set password via Railway ENV
+// ✅ Dashboard auth (uses Railway environment variables)
+const dashboardAuth = basicAuth({
+  users: { 'admin': process.env.DASHBOARD_PASSWORD },
   challenge: true
-}));
+});
 
+// ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Serve static files in dashboard folder (after auth)
+// ✅ Protect dashboard route with auth
+app.use('/dashboard', dashboardAuth);
+
+// ✅ Serve static files for dashboard
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
+// ✅ Handle incoming email posts (e.g., from NumberBarn)
 app.post('/email', async (req, res) => {
   try {
     console.log('📩 Email received!');
@@ -94,10 +93,25 @@ app.post('/email', async (req, res) => {
   }
 });
 
+// ✅ Public root endpoint
 app.get('/', (req, res) => {
   res.send('✅ Clock-in backend is live!');
 });
 
+// ✅ API route for frontend to get clock entries
+app.get('/api/clock-entries', dashboardAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM clock_entries ORDER BY datetime_pst DESC LIMIT 100'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Failed to fetch clock entries:', err);
+    res.status(500).send('Server error');
+  }
+});
+
+// ✅ Start the server
 pool.connect()
   .then(() => {
     console.log('✅ Connected to the database!');
@@ -109,13 +123,3 @@ pool.connect()
     console.error('❌ Database connection error:', err);
     process.exit(1);
   });
-
-app.get('/api/clock-entries', dashboardAuth, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM clock_entries ORDER BY datetime_pst DESC LIMIT 100');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('❌ Failed to fetch clock entries:', err);
-    res.status(500).send('Server error');
-  }
-});
