@@ -71,6 +71,9 @@ app.post('/email', async (req, res) => {
       note
     ]);
 
+    console.log(`✅ Inserted clock entry for project: ${projectName}`);
+
+
     res.status(200).send('Email received and data saved!');
   } catch (err) {
     console.error('❌ Error handling email:', err);
