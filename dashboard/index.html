@@ -1,57 +1,77 @@
-<!-- dashboard/index.html -->
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Time Clock Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
 </head>
 <body>
   <h1>✅ Dashboard is Live!</h1>
   <table id="clockEntriesTable">
     <thead>
       <tr>
-        <th>Employee Name</th>
-        <th>Project Name</th>
-        <th>Clock-in Time</th>
-        <th>Clock-out Time</th>
-        <th>Total Hours</th>
+        <th>Phone</th>
+        <th>Worker</th>
+        <th>Project</th>
+        <th>Action</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Note</th>
       </tr>
     </thead>
     <tbody>
       <!-- Clock entries will be populated here -->
     </tbody>
   </table>
-    
-    // Function to fetch clock entries and display them on the dashboard
-  async function fetchClockEntries() {
-    try {
-      const response = await fetch('/api/clock-entries');
-      if (!response.ok) {
-        throw new Error('Failed to fetch clock entries');
-      }
-      const clockEntries = await response.json();
-  
-      // Get the table body where entries will be inserted
-      const tableBody = document.querySelector('#clockEntriesTable tbody');
-      tableBody.innerHTML = ''; // Clear existing entries
-  
-      // Loop through the clock entries and create a row for each entry
-      clockEntries.forEach(entry => {
-        const row = tableBody.insertRow();
-        row.innerHTML = `
-          <td>${entry.employee_name}</td>
-          <td>${entry.project_name}</td>
-          <td>${entry.clock_in}</td>
-          <td>${entry.clock_out}</td>
-          <td>${entry.total_hours}</td>
-        `;
-      });
-    } catch (error) {
-      console.error('Error fetching clock entries:', error);
-    }
-  }
-  
-  // Call the function to fetch and display the clock entries
-  fetchClockEntries();
 
+  <script>
+    async function fetchClockEntries() {
+      try {
+        const response = await fetch('/api/clock-entries');
+        if (!response.ok) {
+          throw new Error('Failed to fetch clock entries');
+        }
+        const clockEntries = await response.json();
+
+        const tableBody = document.querySelector('#clockEntriesTable tbody');
+        tableBody.innerHTML = ''; // Clear table
+
+        clockEntries.forEach(entry => {
+          const row = tableBody.insertRow();
+          row.innerHTML = `
+            <td>${entry.phone_number}</td>
+            <td>${entry.worker_name}</td>
+            <td>${entry.project_name}</td>
+            <td>${entry.action}</td>
+            <td>${new Date(entry.datetime_pst).toLocaleDateString()}</td>
+            <td>${new Date(entry.datetime_pst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+            <td>${entry.note || ''}</td>
+          `;
+        });
+      } catch (error) {
+        console.error('Error fetching clock entries:', error);
+      }
+    }
+
+    fetchClockEntries();
+  </script>
 </body>
 </html>
