@@ -105,3 +105,13 @@ pool.connect()
     console.error('❌ Database connection error:', err);
     process.exit(1);
   });
+
+app.get('/api/clock-entries', dashboardAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM clock_entries ORDER BY datetime_pst DESC LIMIT 100');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Failed to fetch clock entries:', err);
+    res.status(500).send('Server error');
+  }
+});
