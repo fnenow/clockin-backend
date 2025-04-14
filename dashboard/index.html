@@ -8,23 +8,62 @@
       font-family: Arial, sans-serif;
       padding: 20px;
     }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      margin-right: 10px;
+    }
+
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-top: 20px;
     }
+
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
-      text-align: left;
     }
+
     th {
       background-color: #f2f2f2;
+    }
+
+    input, select {
+      padding: 5px;
+      margin-right: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>✅ Dashboard is Live!</h1>
+  <h1>✅ Dashboard with Filters</h1>
+
+  <div class="filters">
+    <label>
+      Worker:
+      <input type="text" id="workerFilter" placeholder="Enter name or phone" />
+    </label>
+    <label>
+      Project:
+      <input type="text" id="projectFilter" placeholder="Enter project" />
+    </label>
+    <label>
+      From:
+      <input type="date" id="startDate" />
+    </label>
+    <label>
+      To:
+      <input type="date" id="endDate" />
+    </label>
+    <button onclick="fetchClockEntries()">Apply Filters</button>
+  </div>
+
   <table id="clockEntriesTable">
     <thead>
       <tr>
@@ -46,15 +85,28 @@
     async function fetchClockEntries() {
       try {
         const response = await fetch('/api/clock-entries');
-        if (!response.ok) {
-          throw new Error('Failed to fetch clock entries');
-        }
+        if (!response.ok) throw new Error('Failed to fetch clock entries');
+
         const clockEntries = await response.json();
 
-        const tableBody = document.querySelector('#clockEntriesTable tbody');
-        tableBody.innerHTML = ''; // Clear table
+        const workerFilter = document.getElementById('workerFilter').value.toLowerCase();
+        const projectFilter = document.getElementById('projectFilter').value.toLowerCase();
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
 
-        clockEntries.forEach(entry => {
+        const tableBody = document.querySelector('#clockEntriesTable tbody');
+        tableBody.innerHTML = '';
+
+        const filteredEntries = clockEntries.filter(entry => {
+          const workerMatch = !workerFilter || entry.worker_name.toLowerCase().includes(workerFilter) || entry.phone_number.includes(workerFilter);
+          const projectMatch = !projectFilter || entry.project_name.toLowerCase().includes(projectFilter);
+          const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
+          const startMatch = !startDate || entryDate >= startDate;
+          const endMatch = !endDate || entryDate <= endDate;
+          return workerMatch && projectMatch && startMatch && endMatch;
+        });
+
+        filteredEntries.forEach(entry => {
           const row = tableBody.insertRow();
           row.innerHTML = `
             <td>${entry.phone_number}</td>
@@ -71,7 +123,8 @@
       }
     }
 
-    fetchClockEntries();
+    // Load data on page load
+    window.onload = fetchClockEntries;
   </script>
 </body>
 </html>
