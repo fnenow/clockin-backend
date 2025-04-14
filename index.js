@@ -37,10 +37,11 @@ app.post('/email', async (req, res) => {
     const message = messageMatch ? messageMatch[1] : 'Unknown';
     const action = message.toLowerCase().includes('out') ? 'Clock out' : 'Clock in';
 
-    const projectMatch = message.match(/project\s+([^\n\r]+)/i);
+    // ✅ Updated: search in fullText instead of message
+    const projectMatch = fullText.match(/Project:\s*(.+)/i);
     const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
 
-    const noteMatch = message.match(/note\s*:\s*([^\n\r]+)/i);
+    const noteMatch = fullText.match(/Note:\s*(.+)/i);
     const note = noteMatch ? noteMatch[1].trim() : '';
 
     const receivedTime = DateTime.now()
@@ -72,7 +73,6 @@ app.post('/email', async (req, res) => {
     ]);
 
     console.log(`✅ Inserted clock entry for project: ${projectName}`);
-
 
     res.status(200).send('Email received and data saved!');
   } catch (err) {
