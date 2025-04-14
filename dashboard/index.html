@@ -1,130 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>Time Clock Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
     }
-
-    h1 {
-      margin-bottom: 10px;
-    }
-
-    .filters {
-      margin-bottom: 20px;
-    }
-
-    .filters label {
-      margin-right: 10px;
-    }
-
     table {
       border-collapse: collapse;
       width: 100%;
+      margin-top: 20px;
     }
-
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
     }
-
     th {
       background-color: #f2f2f2;
     }
-
-    input, select {
-      padding: 5px;
-      margin-right: 10px;
+    #filters {
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>✅ Dashboard with Filters</h1>
+  <h1>✅ Dashboard is Live!</h1>
 
-  <div class="filters">
-    <label>
-      Worker:
-      <input type="text" id="workerFilter" placeholder="Enter name or phone" />
-    </label>
-    <label>
-      Project:
-      <input type="text" id="projectFilter" placeholder="Enter project" />
-    </label>
-    <label>
-      From:
-      <input type="date" id="startDate" />
-    </label>
-    <label>
-      To:
-      <input type="date" id="endDate" />
-    </label>
-    <button onclick="fetchClockEntries()">Apply Filters</button>
+  <div id="filters">
+    <label for="projectFilter">Filter by Project:</label>
+    <select id="projectFilter">
+      <option value="all">All Projects</option>
+    </select>
   </div>
 
   <table id="clockEntriesTable">
     <thead>
       <tr>
-        <th>Phone</th>
-        <th>Worker</th>
-        <th>Project</th>
-        <th>Action</th>
-        <th>Date</th>
-        <th>Time</th>
-        <th>Note</th>
+        <th>Employee Name</th>
+        <th>Project Name</th>
+        <th>Clock-in Time</th>
+        <th>Clock-out Time</th>
+        <th>Total Hours</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Clock entries will be populated here -->
+      <!-- Entries will go here -->
     </tbody>
   </table>
 
   <script>
+    let allEntries = [];
+
     async function fetchClockEntries() {
       try {
         const response = await fetch('/api/clock-entries');
         if (!response.ok) throw new Error('Failed to fetch clock entries');
+        allEntries = await response.json();
 
-        const clockEntries = await response.json();
-
-        const workerFilter = document.getElementById('workerFilter').value.toLowerCase();
-        const projectFilter = document.getElementById('projectFilter').value.toLowerCase();
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        const tableBody = document.querySelector('#clockEntriesTable tbody');
-        tableBody.innerHTML = '';
-
-        const filteredEntries = clockEntries.filter(entry => {
-          const workerMatch = !workerFilter || entry.worker_name.toLowerCase().includes(workerFilter) || entry.phone_number.includes(workerFilter);
-          const projectMatch = !projectFilter || entry.project_name.toLowerCase().includes(projectFilter);
-          const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
-          const startMatch = !startDate || entryDate >= startDate;
-          const endMatch = !endDate || entryDate <= endDate;
-          return workerMatch && projectMatch && startMatch && endMatch;
-        });
-
-        filteredEntries.forEach(entry => {
-          const row = tableBody.insertRow();
-          row.innerHTML = `
-            <td>${entry.phone_number}</td>
-            <td>${entry.worker_name}</td>
-            <td>${entry.project_name}</td>
-            <td>${entry.action}</td>
-            <td>${new Date(entry.datetime_pst).toLocaleDateString()}</td>
-            <td>${new Date(entry.datetime_pst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-            <td>${entry.note || ''}</td>
-          `;
-        });
+        populateProjectDropdown();
+        renderTable('all');
       } catch (error) {
         console.error('Error fetching clock entries:', error);
       }
     }
 
-    // Load data on page load
-    window.onload = fetchClockEntries;
+    function populateProjectDropdown() {
+      const dropdown = document.getElementById('projectFilter');
+      const projectNames = [...new Set(allEntries.map(entry => entry.project_name))];
+      projectNames.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project;
+        option.textContent = project;
+        dropdown.appendChild(option);
+      });
+
+      dropdown.addEventListener('change', () => {
+        renderTable(dropdown.value);
+      });
+    }
+
+    function renderTable(projectFilter) {
+      const tableBody = document.querySelector('#clockEntriesTable tbody');
+      tableBody.innerHTML = '';
+
+      const filtered = projectFilter === 'all'
+        ? allEntries
+        : allEntries.filter(e => e.project_name === projectFilter);
+
+      filtered.forEach(entry => {
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+          <td>${entry.worker_name}</td>
+          <td>${entry.project_name}</td>
+          <td>${entry.datetime_pst}</td>
+          <td>${entry.action === 'Clock out' ? entry.datetime_pst : '-'}</td>
+          <td>-</td> <!-- We'll calculate total hours later -->
+        `;
+      });
+    }
+
+    fetchClockEntries();
   </script>
 </body>
 </html>
