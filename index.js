@@ -21,8 +21,7 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL);
 // ✅ NEW: Basic Auth Middleware
 app.use('/dashboard', basicAuth({
   users: { 'admin': process.env.DASHBOARD_PASSWORD }, // set password via Railway ENV
-  challenge: true,
-  unauthorizedResponse: 'Unauthorized',
+  challenge: true
 }));
 
 app.use(express.json());
