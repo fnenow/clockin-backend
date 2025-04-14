@@ -5,6 +5,10 @@ const { DateTime } = require('luxon');
 const { Pool } = require('pg');
 const path = require('path');
 const basicAuth = require('express-basic-auth'); // ✅ ADD THIS LINE
+const dashboardAuth = basicAuth({
+  users: { [process.env.DASHBOARD_USER]: process.env.DASHBOARD_PASS },
+  challenge: true
+});
 
 const app = express();
 const port = process.env.PORT || 8080;
