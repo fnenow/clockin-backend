@@ -51,7 +51,9 @@
     </label>
     <label>
       Project:
-      <input type="text" id="projectFilter" placeholder="Enter project" />
+      <select id="projectFilter">
+        <option value="">All Projects</option>
+      </select>
     </label>
     <label>
       From:
@@ -61,7 +63,7 @@
       To:
       <input type="date" id="endDate" />
     </label>
-    <button onclick="fetchClockEntries()">Apply Filters</button>
+    <button onclick="applyFilters()">Apply Filters</button>
   </div>
 
   <table id="clockEntriesTable">
@@ -82,48 +84,65 @@
   </table>
 
   <script>
+    let allClockEntries = [];
+
     async function fetchClockEntries() {
       try {
         const response = await fetch('/api/clock-entries');
         if (!response.ok) throw new Error('Failed to fetch clock entries');
+        allClockEntries = await response.json();
 
-        const clockEntries = await response.json();
-
-        const workerFilter = document.getElementById('workerFilter').value.toLowerCase();
-        const projectFilter = document.getElementById('projectFilter').value.toLowerCase();
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        const tableBody = document.querySelector('#clockEntriesTable tbody');
-        tableBody.innerHTML = '';
-
-        const filteredEntries = clockEntries.filter(entry => {
-          const workerMatch = !workerFilter || entry.worker_name.toLowerCase().includes(workerFilter) || entry.phone_number.includes(workerFilter);
-          const projectMatch = !projectFilter || entry.project_name.toLowerCase().includes(projectFilter);
-          const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
-          const startMatch = !startDate || entryDate >= startDate;
-          const endMatch = !endDate || entryDate <= endDate;
-          return workerMatch && projectMatch && startMatch && endMatch;
-        });
-
-        filteredEntries.forEach(entry => {
-          const row = tableBody.insertRow();
-          row.innerHTML = `
-            <td>${entry.phone_number}</td>
-            <td>${entry.worker_name}</td>
-            <td>${entry.project_name}</td>
-            <td>${entry.action}</td>
-            <td>${new Date(entry.datetime_pst).toLocaleDateString()}</td>
-            <td>${new Date(entry.datetime_pst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-            <td>${entry.note || ''}</td>
-          `;
-        });
+        populateProjectDropdown();
+        applyFilters();
       } catch (error) {
         console.error('Error fetching clock entries:', error);
       }
     }
 
-    // Load data on page load
+    function populateProjectDropdown() {
+      const projectDropdown = document.getElementById('projectFilter');
+      const uniqueProjects = [...new Set(allClockEntries.map(entry => entry.project_name))];
+      projectDropdown.innerHTML = '<option value="">All Projects</option>';
+      uniqueProjects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project;
+        option.textContent = project;
+        projectDropdown.appendChild(option);
+      });
+    }
+
+    function applyFilters() {
+      const workerFilter = document.getElementById('workerFilter').value.toLowerCase();
+      const projectFilter = document.getElementById('projectFilter').value;
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+
+      const tableBody = document.querySelector('#clockEntriesTable tbody');
+      tableBody.innerHTML = '';
+
+      const filteredEntries = allClockEntries.filter(entry => {
+        const workerMatch = !workerFilter || entry.worker_name.toLowerCase().includes(workerFilter) || entry.phone_number.includes(workerFilter);
+        const projectMatch = !projectFilter || entry.project_name === projectFilter;
+        const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
+        const startMatch = !startDate || entryDate >= startDate;
+        const endMatch = !endDate || entryDate <= endDate;
+        return workerMatch && projectMatch && startMatch && endMatch;
+      });
+
+      filteredEntries.forEach(entry => {
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+          <td>${entry.phone_number}</td>
+          <td>${entry.worker_name}</td>
+          <td>${entry.project_name}</td>
+          <td>${entry.action}</td>
+          <td>${new Date(entry.datetime_pst).toLocaleDateString()}</td>
+          <td>${new Date(entry.datetime_pst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td>${entry.note || ''}</td>
+        `;
+      });
+    }
+
     window.onload = fetchClockEntries;
   </script>
 </body>
