@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const { DateTime } = require('luxon');
 const { Pool } = require('pg');
 const path = require('path');  // For serving static files
+const basicAuth = require('express-basic-auth'); // ✅ ADD THIS LINE
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -17,23 +18,18 @@ const pool = new Pool({
 
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
-// Basic Authentication middleware for dashboard
-const dashboardAuth = (req, res, next) => {
-  const username = req.headers['username'];
-  const password = req.headers['password'];
-
-  if (username === 'admin' && password === process.env.DASHBOARD_PASSWORD) {
-    return next();
-  } else {
-    res.status(401).send('Unauthorized');
-  }
-};
+// ✅ NEW: Basic Auth Middleware
+app.use('/dashboard', basicAuth({
+  users: { 'admin': process.env.DASHBOARD_PASSWORD }, // set password via Railway ENV
+  challenge: true,
+  unauthorizedResponse: 'Unauthorized',
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (dashboard HTML, CSS, JS) from the "dashboard" folder
-app.use('/dashboard', dashboardAuth, express.static(path.join(__dirname, 'dashboard')));
+// ✅ Serve static files in dashboard folder (after auth)
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 
 app.post('/email', async (req, res) => {
   try {
