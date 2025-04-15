@@ -29,6 +29,7 @@
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
+      vertical-align: top;
     }
 
     th {
@@ -48,10 +49,22 @@
       padding: 5px 10px;
       margin-right: 5px;
     }
+
+    .action-btn {
+      margin-right: 5px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    .paid-toggle {
+      cursor: pointer;
+      color: blue;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <h1>✅ Dashboard with Filters & Pay Info</h1>
+  <h1>✅ Dashboard with Filters, Pay & Admin Controls</h1>
 
   <div class="filters">
     <label>
@@ -91,10 +104,12 @@
         <th>Regular Time</th>
         <th>Overtime</th>
         <th>Total Pay</th>
+        <th>Paid</th>
+        <th>Admin</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Clock entries will be populated here -->
+      <!-- Entries go here -->
     </tbody>
   </table>
 
@@ -115,7 +130,7 @@
         populateDropdowns();
         applyFilters();
       } catch (error) {
-        console.error('Error fetching clock entries:', error);
+        console.error('Error fetching entries:', error);
       }
     }
 
@@ -144,18 +159,18 @@
     }
 
     function applyFilters() {
-      const workerFilter = document.getElementById('workerFilter').value;
-      const projectFilter = document.getElementById('projectFilter').value;
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
+      const worker = document.getElementById('workerFilter').value;
+      const project = document.getElementById('projectFilter').value;
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
 
       filteredEntries = allClockEntries.filter(entry => {
-        const workerMatch = !workerFilter || entry.worker_name === workerFilter;
-        const projectMatch = !projectFilter || entry.project_name === projectFilter;
+        const matchWorker = !worker || entry.worker_name === worker;
+        const matchProject = !project || entry.project_name === project;
         const entryDate = new Date(entry.datetime_pst).toISOString().split('T')[0];
-        const startMatch = !startDate || entryDate >= startDate;
-        const endMatch = !endDate || entryDate <= endDate;
-        return workerMatch && projectMatch && startMatch && endMatch;
+        const matchStart = !start || entryDate >= start;
+        const matchEnd = !end || entryDate <= end;
+        return matchWorker && matchProject && matchStart && matchEnd;
       });
 
       currentPage = 1;
@@ -164,15 +179,15 @@
     }
 
     function displayEntries() {
-      const tableBody = document.querySelector('#clockEntriesTable tbody');
-      tableBody.innerHTML = '';
+      const tbody = document.querySelector('#clockEntriesTable tbody');
+      tbody.innerHTML = '';
 
       const start = (currentPage - 1) * rowsPerPage;
       const end = start + rowsPerPage;
-      const paginatedEntries = filteredEntries.slice(start, end);
+      const entries = filteredEntries.slice(start, end);
 
-      paginatedEntries.forEach(entry => {
-        const row = tableBody.insertRow();
+      entries.forEach(entry => {
+        const row = tbody.insertRow();
         row.innerHTML = `
           <td>${entry.phone_number}</td>
           <td>${entry.worker_name}</td>
@@ -184,14 +199,18 @@
           <td>${entry.regular_time || 0}</td>
           <td>${entry.overtime || 0}</td>
           <td>$${(entry.pay_amount || 0).toFixed(2)}</td>
+          <td><span class="paid-toggle" onclick="togglePaid('${entry.id}', ${entry.paid})">${entry.paid ? 'Yes' : 'No'}</span></td>
+          <td>
+            <button class="action-btn" onclick="editEntry('${entry.id}')">Edit</button>
+            <button class="action-btn" onclick="deleteEntry('${entry.id}')">Delete</button>
+          </td>
         `;
       });
     }
 
     function setupPagination() {
-      const paginationControls = document.getElementById('paginationControls');
-      paginationControls.innerHTML = '';
-
+      const controls = document.getElementById('paginationControls');
+      controls.innerHTML = '';
       const totalPages = Math.ceil(filteredEntries.length / rowsPerPage);
 
       for (let i = 1; i <= totalPages; i++) {
@@ -203,24 +222,54 @@
           displayEntries();
           setupPagination();
         });
-        paginationControls.appendChild(btn);
+        controls.appendChild(btn);
       }
     }
 
     function exportToCSV() {
-      const table = document.getElementById('clockEntriesTable');
-      const rows = Array.from(table.querySelectorAll('tr'));
-      const csvContent = rows.map(row => {
+      const rows = Array.from(document.querySelectorAll('#clockEntriesTable tr'));
+      const csv = rows.map(row => {
         const cols = Array.from(row.querySelectorAll('th, td'));
         return cols.map(col => `"${col.textContent.replace(/"/g, '""')}"`).join(',');
       }).join('\n');
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
       link.setAttribute('download', 'clock_entries.csv');
       link.click();
+    }
+
+    function togglePaid(id, currentStatus) {
+      const newStatus = !currentStatus;
+      fetch(`/api/clock-entries/${id}/toggle-paid`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paid: newStatus })
+      }).then(res => {
+        if (res.ok) fetchClockEntries();
+      });
+    }
+
+    function deleteEntry(id) {
+      if (!confirm('Are you sure you want to delete this entry?')) return;
+      fetch(`/api/clock-entries/${id}`, { method: 'DELETE' })
+        .then(res => {
+          if (res.ok) fetchClockEntries();
+        });
+    }
+
+    function editEntry(id) {
+      const newNote = prompt("Enter new note:");
+      if (newNote === null) return;
+      fetch(`/api/clock-entries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: newNote })
+      }).then(res => {
+        if (res.ok) fetchClockEntries();
+      });
     }
 
     fetchClockEntries();
