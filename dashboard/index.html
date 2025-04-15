@@ -9,15 +9,16 @@
       padding: 20px;
     }
 
-    h1 {
+    h1, h2 {
       margin-bottom: 10px;
     }
 
-    .filters {
+    .filters, #manualEntryForm {
       margin-bottom: 20px;
     }
 
-    .filters label {
+    .filters label,
+    #manualEntryForm label {
       margin-right: 10px;
     }
 
@@ -65,6 +66,38 @@
 </head>
 <body>
   <h1>✅ Dashboard with Filters, Pay & Admin Controls</h1>
+
+  <h2>➕ Add Manual Entry</h2>
+  <form id="manualEntryForm">
+    <label>
+      Phone:
+      <input type="text" name="phone_number" required />
+    </label>
+    <label>
+      Worker:
+      <input type="text" name="worker_name" required />
+    </label>
+    <label>
+      Project:
+      <input type="text" name="project_name" required />
+    </label>
+    <label>
+      Action:
+      <select name="action" required>
+        <option value="Clock in">Clock in</option>
+        <option value="Clock out">Clock out</option>
+      </select>
+    </label>
+    <label>
+      Date/Time (PST):
+      <input type="datetime-local" name="datetime_pst" required />
+    </label>
+    <label>
+      Note:
+      <input type="text" name="note" />
+    </label>
+    <button type="submit">Add Entry</button>
+  </form>
 
   <div class="filters">
     <label>
@@ -271,6 +304,34 @@
         if (res.ok) fetchClockEntries();
       });
     }
+
+    // Handle manual entry form
+    document.getElementById('manualEntryForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        phone_number: form.phone_number.value,
+        worker_name: form.worker_name.value,
+        project_name: form.project_name.value,
+        action: form.action.value,
+        datetime_pst: form.datetime_pst.value,
+        note: form.note.value
+      };
+
+      const res = await fetch('/api/manual-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('✅ Manual entry added!');
+        form.reset();
+        fetchClockEntries();
+      } else {
+        alert('❌ Failed to add entry.');
+      }
+    });
 
     fetchClockEntries();
   </script>
