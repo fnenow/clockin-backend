@@ -112,6 +112,62 @@ app.get('/api/clock-entries', dashboardAuth, async (req, res) => {
   }
 });
 
+// ✅ Create a manual clock entry
+app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
+  try {
+    const {
+      phone_number,
+      worker_name,
+      project_name,
+      action,
+      datetime,
+      note
+    } = req.body;
+
+    const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
+    const utcDateTime = dt.toUTC();
+    const pstDateTime = dt.setZone('America/Los_Angeles');
+
+    const workerData = await pool.query('SELECT pay_rate FROM workers WHERE phone_number = $1', [phone_number]);
+    const payRate = workerData.rows[0] ? workerData.rows[0].pay_rate : 15;
+
+    const hoursWorked = 8;
+    const regularHours = 8;
+    const overtimeHours = 0;
+
+    const regularPay = regularHours * payRate;
+    const overtimePay = overtimeHours * payRate * 1.5;
+    const totalPay = regularPay + overtimePay;
+
+    await pool.query(`
+      INSERT INTO clock_entries (
+        phone_number, worker_name, project_name, action,
+        datetime_utc, datetime_pst, day, month, year, time, note, regular_time, overtime, pay_amount
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `, [
+      phone_number,
+      worker_name,
+      project_name,
+      action,
+      utcDateTime.toISO(),
+      pstDateTime.toISO(),
+      pstDateTime.day,
+      pstDateTime.month,
+      pstDateTime.year,
+      pstDateTime.toFormat('HH:mm'),
+      note,
+      regularHours,
+      overtimeHours,
+      totalPay
+    ]);
+
+    res.status(200).send('Manual entry created!');
+  } catch (err) {
+    console.error('❌ Error creating manual entry:', err);
+    res.status(500).send('Server error');
+  }
+});
+
 // ✅ Update a clock entry's note
 app.patch('/api/clock-entries/:id', dashboardAuth, async (req, res) => {
   const { id } = req.params;
@@ -155,60 +211,6 @@ app.delete('/api/clock-entries/:id', dashboardAuth, async (req, res) => {
     res.sendStatus(204);
   } catch (error) {
     console.error('Error deleting entry:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// ✅ Create manual entry
-app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
-  const {
-    phone_number,
-    worker_name,
-    project_name,
-    action,
-    datetime,
-    note
-  } = req.body;
-
-  try {
-    const payResult = await pool.query('SELECT pay_rate FROM workers WHERE phone_number = $1', [phone_number]);
-    const payRate = payResult.rows[0] ? payResult.rows[0].pay_rate : 15;
-
-    const dt = DateTime.fromISO(datetime).setZone('America/Los_Angeles');
-    const utcDateTime = dt.toUTC();
-
-    const hoursWorked = 0; // Admin will need to set actual hours if needed later
-    const regularHours = 0;
-    const overtimeHours = 0;
-    const totalPay = 0;
-
-    const result = await pool.query(`
-      INSERT INTO clock_entries (
-        phone_number, worker_name, project_name, action,
-        datetime_utc, datetime_pst, day, month, year, time, note,
-        regular_time, overtime, pay_amount
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *
-    `, [
-      phone_number,
-      worker_name,
-      project_name,
-      action,
-      utcDateTime.toISO(),
-      dt.toISO(),
-      dt.day,
-      dt.month,
-      dt.year,
-      dt.toFormat('HH:mm'),
-      note,
-      regularHours,
-      overtimeHours,
-      totalPay
-    ]);
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating manual entry:', error);
     res.status(500).send('Server error');
   }
 });
