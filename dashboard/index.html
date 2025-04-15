@@ -152,8 +152,8 @@
       const project = document.getElementById('projectFilter').value.toLowerCase();
 
       let filtered = allEntries.filter(entry => {
-     // const dt = new Date(entry.datetime);
-        const dt = new Date(entry.datetime.replace(' ', 'T'));
+        const dt = new Date(entry.datetime);
+     // const dt = new Date(entry.datetime.replace(' ', 'T'));
         const matchDate = (!start || new Date(start) <= dt) && (!end || dt <= new Date(end));
         const matchWorker = !worker || entry.worker_name?.toLowerCase().includes(worker);
         const matchProject = !project || entry.project_name?.toLowerCase().includes(project);
