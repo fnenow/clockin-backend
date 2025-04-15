@@ -51,6 +51,11 @@ app.post('/email', async (req, res) => {
       .setZone('America/Los_Angeles')
       .plus(action === 'Clock out' ? { minutes: 2 } : { minutes: -2 });
 
+    if (!receivedTime.isValid) {
+      console.warn('⚠️ Invalid date generated in /email handler:', receivedTime.invalidExplanation);
+      return res.status(400).send('Invalid date format');
+    }
+
     const utcDateTime = receivedTime.toUTC();
     const pstDateTime = receivedTime.setZone('America/Los_Angeles');
 
@@ -96,23 +101,7 @@ app.post('/email', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('✅ Clock-in backend is live!');
-});
-
-app.get('/api/clock-entries', dashboardAuth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM clock_entries ORDER BY datetime_pst DESC LIMIT 100'
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('❌ Failed to fetch clock entries:', err);
-    res.status(500).send('Server error');
-  }
-});
-
-// ✅ Create a manual clock entry
+// ✅ Manual Entry (with Invalid Date Logging)
 app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
   try {
     const {
@@ -125,6 +114,12 @@ app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
     } = req.body;
 
     const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
+
+    if (!dt.isValid) {
+      console.error('❌ Invalid datetime format received:', datetime);
+      return res.status(400).send('Invalid datetime format');
+    }
+
     const utcDateTime = dt.toUTC();
     const pstDateTime = dt.setZone('America/Los_Angeles');
 
@@ -167,62 +162,3 @@ app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
-// ✅ Update a clock entry's note
-app.patch('/api/clock-entries/:id', dashboardAuth, async (req, res) => {
-  const { id } = req.params;
-  const { note } = req.body;
-
-  try {
-    const result = await pool.query(
-      'UPDATE clock_entries SET note = $1 WHERE id = $2 RETURNING *',
-      [note, id]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating entry:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// ✅ Toggle paid status
-app.patch('/api/clock-entries/:id/toggle-paid', dashboardAuth, async (req, res) => {
-  const { id } = req.params;
-  const { paid } = req.body;
-
-  try {
-    const result = await pool.query(
-      'UPDATE clock_entries SET paid = $1 WHERE id = $2 RETURNING *',
-      [paid, id]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error toggling paid status:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// ✅ Delete a clock entry
-app.delete('/api/clock-entries/:id', dashboardAuth, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    await pool.query('DELETE FROM clock_entries WHERE id = $1', [id]);
-    res.sendStatus(204);
-  } catch (error) {
-    console.error('Error deleting entry:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-pool.connect()
-  .then(() => {
-    console.log('✅ Connected to the database!');
-    app.listen(port, () => {
-      console.log(`🚀 Server listening on port ${port}`);
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Database connection error:', err);
-    process.exit(1);
-  });
