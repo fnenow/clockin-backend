@@ -35,7 +35,7 @@ app.post('/email', async (req, res) => {
     const fullText = $('body').text();
 
     const phoneMatch = fullText.match(/From:\s*\((\d{3})\)\s*(\d{3})-(\d{4})/);
-    const phoneNumber = phoneMatch ? '${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}' : 'Unknown';
+    const phoneNumber = phoneMatch ? `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}` : 'Unknown';
 
     const messageMatch = fullText.match(/Message:\s*(Clock (in|out).*)/i);
     const message = messageMatch ? messageMatch[1] : 'Unknown';
@@ -67,12 +67,12 @@ app.post('/email', async (req, res) => {
 
     const workerName = phoneNumber;
 
-    await pool.query(
+    await pool.query(`
       INSERT INTO clock_entries (
         phone_number, worker_name, project_name, action,
         datetime_utc, datetime_pst, day, month, year, time, note, regular_time, overtime, pay_amount
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    , [
+    `, [
       phoneNumber,
       workerName,
       projectName,
@@ -139,12 +139,12 @@ app.post('/api/clock-entries', dashboardAuth, async (req, res) => {
     const overtimePay = overtimeHours * payRate * 1.5;
     const totalPay = regularPay + overtimePay;
 
-    await pool.query(
+    await pool.query(`
       INSERT INTO clock_entries (
         phone_number, worker_name, project_name, action,
         datetime_utc, datetime_pst, day, month, year, time, note, regular_time, overtime, pay_amount
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    , [
+    `, [
       phone_number,
       worker_name,
       project_name,
@@ -219,7 +219,7 @@ pool.connect()
   .then(() => {
     console.log('✅ Connected to the database!');
     app.listen(port, () => {
-      console.log(🚀 Server listening on port ${port});
+      console.log(`🚀 Server listening on port ${port}`);
     });
   })
   .catch((err) => {
