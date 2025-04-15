@@ -35,7 +35,7 @@ app.post('/email', async (req, res) => {
     const fullText = $('body').text();
 
     const phoneMatch = fullText.match(/From:\s*\((\d{3})\)\s*(\d{3})-(\d{4})/);
-    const phoneNumber = phoneMatch ? ${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]} : 'Unknown';
+    const phoneNumber = phoneMatch ? '${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}' : 'Unknown';
 
     const messageMatch = fullText.match(/Message:\s*(Clock (in|out).*)/i);
     const message = messageMatch ? messageMatch[1] : 'Unknown';
