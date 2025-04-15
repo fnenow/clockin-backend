@@ -51,7 +51,7 @@
   </style>
 </head>
 <body>
-  <h1>✅ Dashboard with Filters</h1>
+  <h1>✅ Dashboard with Filters & Pay Info</h1>
 
   <div class="filters">
     <label>
@@ -88,6 +88,9 @@
         <th>Date</th>
         <th>Time</th>
         <th>Note</th>
+        <th>Regular Time</th>
+        <th>Overtime</th>
+        <th>Total Pay</th>
       </tr>
     </thead>
     <tbody>
@@ -178,6 +181,9 @@
           <td>${new Date(entry.datetime_pst).toLocaleDateString()}</td>
           <td>${new Date(entry.datetime_pst).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
           <td>${entry.note || ''}</td>
+          <td>${entry.regular_time || 0}</td>
+          <td>${entry.overtime || 0}</td>
+          <td>$${(entry.pay_amount || 0).toFixed(2)}</td>
         `;
       });
     }
