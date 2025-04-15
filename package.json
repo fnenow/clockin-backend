@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"  // Add this if you want to use nodemon in development
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -14,6 +14,6 @@
     "pg": "^8.11.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"  // This is optional, used for development if you want automatic server restarts
+    "nodemon": "^2.0.22"
   }
 }
