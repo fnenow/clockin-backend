@@ -37,7 +37,7 @@ app.post('/email', async (req, res) => {
     const projectMatch = message.match(/project\s+([^\n\r]+)/i);
     const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
 
-    const noteMatch = message.match(/note\s*:\s*([^\n\r]+)/i);
+    const noteMatch = fullText.match(/note\s*:\s*([^\n\r]+)/i);
     const note = noteMatch ? noteMatch[1].trim() : '';
 
     const now = DateTime.now().setZone('America/Los_Angeles');
