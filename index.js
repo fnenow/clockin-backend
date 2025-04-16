@@ -34,8 +34,12 @@ app.post('/email', async (req, res) => {
     const message = messageMatch ? messageMatch[1] : 'Unknown';
     const action = message.toLowerCase().includes('out') ? 'Clock out' : 'Clock in';
 
-    const projectMatch = message.match(/project\s+([^\n\r]+)/i);
+    // const projectMatch = fullText.match(/project:\s+([^\n\r]+)/i);
+    // const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
+    // new project extraction (from fullText)
+    const projectMatch = fullText.match(/Project:\s*([^\n\r]+)/i);
     const projectName = projectMatch ? projectMatch[1].trim() : 'Unknown';
+
 
     const noteMatch = fullText.match(/note\s*:\s*([^\n\r]+)/i);
     const note = noteMatch ? noteMatch[1].trim() : '';
