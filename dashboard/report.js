@@ -9,7 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let entries = [];
 
   async function fetchEntries() {
-    const res = await fetch("/api/clock-entries");
+    //const res = await fetch("/api/clock-entries");    // replaced by below
+    const res = await fetch('/api/clock-entries/report'); //replaced above
     entries = await res.json();
     renderTable();
     populateFilters();
