@@ -1,133 +1,266 @@
-<script>
-  let allEntries = [];
-  let currentPage = 1;
-  const entriesPerPage = 10;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Time Clock Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .filter-bar, .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    button {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .pagination {
+      margin-top: 10px;
+    }
+    .pagination button {
+      margin-right: 5px;
+    }
+    #addModal, #overlay {
+      display: none;
+    }
+    #addModal {
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏱️ Time Clock Dashboard</h1>
 
-  async function fetchClockEntries() {
-    const res = await fetch('/api/clock-entries');
-    allEntries = await res.json();
-    applyFilters();
-  }
+  <div class="actions">
+    <button onclick="showAddModal()">➕ Add Manual Entry</button>
+    <button onclick="exportToCSV()">📤 Export CSV</button>
+  </div>
 
-  function applyFilters() {
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
-    const worker = document.getElementById('workerFilter').value.toLowerCase();
-    const project = document.getElementById('projectFilter').value.toLowerCase();
+  <div class="filter-bar">
+    <label>
+      Start Date:
+      <input type="date" id="startDate">
+    </label>
+    <label>
+      End Date:
+      <input type="date" id="endDate">
+    </label>
+    <label>
+      Worker:
+      <input type="text" id="workerFilter" placeholder="Name">
+    </label>
+    <label>
+      Project:
+      <input type="text" id="projectFilter" placeholder="Project">
+    </label>
+    <button onclick="applyFilters()">🔍 Filter</button>
+    <button onclick="clearFilters()">❌ Clear</button>
+  </div>
 
-    let filtered = allEntries.filter(entry => {
-      const dt = new Date(entry.datetime);
-      const matchDate = (!start || new Date(start) <= dt) && (!end || dt <= new Date(end));
-      const matchWorker = !worker || entry.worker_name?.toLowerCase().includes(worker);
-      const matchProject = !project || entry.project_name?.toLowerCase().includes(project);
-      return matchDate && matchWorker && matchProject;
-    });
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Phone Number</th>
+        <th>Worker</th>
+        <th>Project</th>
+        <th>Action</th>
+        <th>Date & Time</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody id="entriesTable"></tbody>
+  </table>
 
-    displayEntries(filtered);
-  }
+  <div class="pagination" id="pagination"></div>
 
-  function clearFilters() {
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
-    document.getElementById('workerFilter').value = '';
-    document.getElementById('projectFilter').value = '';
-    displayEntries(allEntries);
-  }
+  <!-- Modal -->
+  <div id="overlay" onclick="hideAddModal()"></div>
+  <div id="addModal">
+    <h3>Manual Time Entry</h3>
+    <form id="addEntryForm">
+      <label>Phone Number: <input type="text" name="phone_number" required></label><br><br>
+      <label>Worker Name: <input type="text" name="worker_name" required></label><br><br>
+      <label>Project Name: <input type="text" name="project_name" required></label><br><br>
+      <label>Action:
+        <select name="action" required>
+          <option value="Clock in">Clock in</option>
+          <option value="Clock out">Clock out</option>
+        </select>
+      </label><br><br>
+      <label>Date & Time (PST): <input type="datetime-local" name="datetime" required></label><br><br>
+      <label>Note: <input type="text" name="note"></label><br><br>
+      <button type="submit">Submit</button>
+      <button type="button" onclick="hideAddModal()">Cancel</button>
+    </form>
+  </div>
 
-  function displayEntries(entries) {
-    const table = document.getElementById('entriesTable');
-    table.innerHTML = '';
+  <script>
+    let allEntries = [];
+    let currentPage = 1;
+    const entriesPerPage = 10;
 
-    const start = (currentPage - 1) * entriesPerPage;
-    const paginated = entries.slice(start, start + entriesPerPage);
-
-    for (let entry of paginated) {
-      const dateTimeDisplay = entry.datetime && !isNaN(new Date(entry.datetime))
-        ? new Date(entry.datetime).toLocaleString()
-        : 'Invalid Date';
-
-      const row = `<tr>
-        <td>${entry.id}</td>
-        <td>${entry.phone_number || ''}</td>
-        <td>${entry.worker_name || ''}</td>
-        <td>${entry.project_name || ''}</td>
-        <td>${entry.action}</td>
-        <td>${dateTimeDisplay}</td>
-        <td>${entry.note || ''}</td>
-      </tr>`;
-      table.insertAdjacentHTML('beforeend', row);
+    async function fetchClockEntries() {
+      const res = await fetch('/api/clock-entries');
+      allEntries = await res.json();
+      applyFilters();
     }
 
-    setupPagination(entries.length);
-  }
+    function applyFilters() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const worker = document.getElementById('workerFilter').value.toLowerCase();
+      const project = document.getElementById('projectFilter').value.toLowerCase();
 
-  function setupPagination(total) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-    const totalPages = Math.ceil(total / entriesPerPage);
-    for (let i = 1; i <= totalPages; i++) {
-      const btn = document.createElement('button');
-      btn.textContent = i;
-      if (i === currentPage) btn.disabled = true;
-      btn.onclick = () => {
-        currentPage = i;
-        applyFilters();
-      };
-      pagination.appendChild(btn);
-    }
-  }
-
-  function exportToCSV() {
-    const rows = [["ID", "Phone Number", "Worker", "Project", "Action", "Date & Time", "Note"]];
-    const start = (currentPage - 1) * entriesPerPage;
-    const filtered = allEntries.slice(start, start + entriesPerPage);
-    for (let e of filtered) {
-      rows.push([
-        e.id, e.phone_number, e.worker_name, e.project_name, e.action,
-        new Date(e.datetime).toLocaleString(), e.note || ''
-      ]);
-    }
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "clock_entries.csv";
-    link.click();
-  }
-
-  function showAddModal() {
-    document.getElementById('addModal').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-  }
-
-  function hideAddModal() {
-    document.getElementById('addModal').style.display = 'none';
-    document.getElementById('overlay').style.display = 'none';
-  }
-
-  document.getElementById('addEntryForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-      const res = await fetch('/api/clock-entries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      const filtered = allEntries.filter(entry => {
+        const rawDate = entry.datetime ?? entry.datetime_pst;
+        const dt = new Date(rawDate);
+        const matchDate = (!start || new Date(start) <= dt) && (!end || dt <= new Date(end));
+        const matchWorker = !worker || entry.worker_name?.toLowerCase().includes(worker);
+        const matchProject = !project || entry.project_name?.toLowerCase().includes(project);
+        return matchDate && matchWorker && matchProject;
       });
 
-      if (!res.ok) throw new Error('Failed to add entry');
-
-      hideAddModal();
-      this.reset();
-      fetchClockEntries();
-      alert('Manual entry added!');
-    } catch (err) {
-      alert('Error: ' + err.message);
+      displayEntries(filtered);
     }
-  });
 
-  fetchClockEntries();
-</script>
+    function clearFilters() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('workerFilter').value = '';
+      document.getElementById('projectFilter').value = '';
+      displayEntries(allEntries);
+    }
+
+    function displayEntries(entries) {
+      const table = document.getElementById('entriesTable');
+      table.innerHTML = '';
+      const start = (currentPage - 1) * entriesPerPage;
+      const paginated = entries.slice(start, start + entriesPerPage);
+
+      for (const entry of paginated) {
+        const datetime = new Date(entry.datetime ?? entry.datetime_pst).toLocaleString();
+        const row = `<tr>
+          <td>${entry.id}</td>
+          <td>${entry.phone_number || ''}</td>
+          <td>${entry.worker_name || ''}</td>
+          <td>${entry.project_name || ''}</td>
+          <td>${entry.action}</td>
+          <td>${datetime}</td>
+          <td>${entry.note || ''}</td>
+        </tr>`;
+        table.insertAdjacentHTML('beforeend', row);
+      }
+
+      setupPagination(entries.length);
+    }
+
+    function setupPagination(total) {
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+      const totalPages = Math.ceil(total / entriesPerPage);
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        if (i === currentPage) btn.disabled = true;
+        btn.onclick = () => {
+          currentPage = i;
+          applyFilters();
+        };
+        pagination.appendChild(btn);
+      }
+    }
+
+    function exportToCSV() {
+      const rows = [["ID", "Phone Number", "Worker", "Project", "Action", "Date & Time", "Note"]];
+      const start = (currentPage - 1) * entriesPerPage;
+      const filtered = allEntries.slice(start, start + entriesPerPage);
+      for (let e of filtered) {
+        rows.push([
+          e.id, e.phone_number, e.worker_name, e.project_name, e.action,
+          new Date(e.datetime ?? e.datetime_pst).toLocaleString(), e.note || ''
+        ]);
+      }
+      const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "clock_entries.csv";
+      link.click();
+    }
+
+    function showAddModal() {
+      document.getElementById('addModal').style.display = 'block';
+      document.getElementById('overlay').style.display = 'block';
+    }
+
+    function hideAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+    }
+
+    document.getElementById('addEntryForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await fetch('/api/clock-entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) throw new Error('Failed to add entry');
+
+        hideAddModal();
+        this.reset();
+        fetchClockEntries();
+        alert('Manual entry added!');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    fetchClockEntries();
+  </script>
+</body>
+</html>
