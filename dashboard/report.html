@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Time Clock Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .pagination {
+      margin-top: 10px;
+    }
+    .pagination button {
+      margin-right: 5px;
+    }
+    button {
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .missing {
+      background-color: #ffeeba;
+    }
+    .add-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Time Clock Report</h1>
+
+  <div class="filter-bar">
+    <label>
+      From:
+      <input type="date" id="startDate" />
+    </label>
+    <label>
+      To:
+      <input type="date" id="endDate" />
+    </label>
+    <label>
+      Worker:
+      <select id="workerFilter">
+        <option value="">All Workers</option>
+      </select>
+    </label>
+    <label>
+      Project:
+      <select id="projectFilter">
+        <option value="">All Projects</option>
+      </select>
+    </label>
+    <button onclick="applyReportFilters()">🔍 Filter</button>
+    <button onclick="clearReportFilters()">❌ Clear</button>
+    <button onclick="exportReportCSV()">📤 Export</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Worker</th>
+        <th>Phone (Last 5)</th>
+        <th>Date</th>
+        <th>Project</th>
+        <th>Clock In</th>
+        <th>Clock Out</th>
+        <th>Hours</th>
+        <th>Pay Rate</th>
+        <th>Amount</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="reportTable">
+      <!-- Report rows here -->
+    </tbody>
+  </table>
+
+  <div class="pagination" id="reportPagination"></div>
+
+  <script src="report.js"></script>
+</body>
+</html>
