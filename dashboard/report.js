@@ -1,113 +1,100 @@
-
-document.addEventListener("DOMContentLoaded", async () => {
-  const tableBody = document.querySelector("#reportTable tbody");
-  const workerFilter = document.getElementById("workerFilter");
+document.addEventListener("DOMContentLoaded", () => {
+  const tableBody     = document.getElementById("reportTable");
+  const workerFilter  = document.getElementById("workerFilter");
   const projectFilter = document.getElementById("projectFilter");
-  const startDate = document.getElementById("startDate");
-  const endDate = document.getElementById("endDate");
+  const startDateEl   = document.getElementById("startDate");
+  const endDateEl     = document.getElementById("endDate");
+  const filterBtn     = document.getElementById("filterButton");
+  const clearBtn      = document.getElementById("clearButton");
+  const exportBtn     = document.getElementById("exportButton");
 
-  let entries = [];
+  let reportData = [];
 
-  async function fetchEntries() {
-    //const res = await fetch("/api/clock-entries");    // replaced by below
-    const res = await fetch('/api/clock-entries/report'); //replaced above
-    entries = await res.json();
-    renderTable();
-    populateFilters();
+  // Fetch report data from new endpoint
+  async function fetchReportData() {
+    try {
+      const res = await fetch("/api/clock-entries/report");
+      if (!res.ok) throw new Error("Network response was not ok");
+      reportData = await res.json();
+      console.log("Report data:", reportData);
+      populateFilters();
+      renderTable();
+    } catch (err) {
+      console.error("Error fetching report data:", err);
+    }
   }
 
+  // Fill worker & project dropdowns
   function populateFilters() {
-    const workers = [...new Set(entries.map(e => e.worker_name).filter(Boolean))];
-    const projects = [...new Set(entries.map(e => e.project_name).filter(Boolean))];
+    const workers  = [...new Set(reportData.map(r => r.worker_name).filter(Boolean))];
+    const projects = [...new Set(reportData.map(r => r.project_name).filter(Boolean))];
 
-    workerFilter.innerHTML = '<option value="">All</option>' +
-      workers.map(w => `<option value="${w}">${w}</option>`).join("");
-    projectFilter.innerHTML = '<option value="">All</option>' +
-      projects.map(p => `<option value="${p}">${p}</option>`).join("");
+    workerFilter.innerHTML  = `<option value="">All Workers</option>` +
+      workers.map(w => `<option>${w}</option>`).join("");
+    projectFilter.innerHTML = `<option value="">All Projects</option>` +
+      projects.map(p => `<option>${p}</option>`).join("");
   }
 
+  // Render the table rows based on filters
   function renderTable() {
-    const filtered = entries.filter(e => {
-      const date = new Date(e.datetime_pst);
-      const start = startDate.value ? new Date(startDate.value) : null;
-      const end = endDate.value ? new Date(endDate.value) : null;
-      const matchDate = (!start || date >= start) && (!end || date <= end);
-      const matchWorker = !workerFilter.value || e.worker_name === workerFilter.value;
-      const matchProject = !projectFilter.value || e.project_name === projectFilter.value;
-      return matchDate && matchWorker && matchProject;
-    });
-
-    // Group by worker, date, project
-    const grouped = {};
-    filtered.forEach(e => {
-      const date = new Date(e.datetime_pst).toLocaleDateString();
-      const key = `${e.worker_name}|${e.project_name}|${date}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(e);
-    });
-
     tableBody.innerHTML = "";
+    const start   = startDateEl.value ? new Date(startDateEl.value) : null;
+    const end     = endDateEl.value   ? new Date(endDateEl.value)   : null;
+    const worker  = workerFilter.value;
+    const project = projectFilter.value;
 
-    Object.entries(grouped).forEach(([key, group]) => {
-      group.sort((a, b) => new Date(a.datetime_pst) - new Date(b.datetime_pst));
-      for (let i = 0; i < group.length; i += 2) {
-        const inEntry = group[i];
-        const outEntry = group[i + 1] || {};
-
-        const clockIn = inEntry.action === "Clock in" ? inEntry : outEntry;
-        const clockOut = outEntry.action === "Clock out" ? outEntry : null;
-
-        const clockInTime = clockIn ? new Date(clockIn.datetime_pst).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-        const clockOutTime = clockOut ? new Date(clockOut.datetime_pst).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-
-        const hoursWorked = (clockIn && clockOut)
-          ? ((new Date(clockOut.datetime_pst) - new Date(clockIn.datetime_pst)) / 3600000).toFixed(2)
-          : "";
-
-        const payRate = clockIn?.pay_rate || "";
-        const amount = payRate && hoursWorked ? (payRate * hoursWorked).toFixed(2) : "";
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${clockIn?.worker_name || ""}</td>
-          <td>${clockIn?.phone_number?.slice(-5) || ""}</td>
-          <td>${clockIn ? new Date(clockIn.datetime_pst).toLocaleDateString() : ""}</td>
-          <td>${clockIn?.project_name || ""}</td>
-          <td>${clockInTime}</td>
-          <td>${clockOutTime}</td>
-          <td>${hoursWorked}</td>
-          <td>${payRate}</td>
-          <td>${amount}</td>
+    reportData
+      .filter(r => {
+        const date = new Date(r.date);
+        const matchDate   = (!start || date >= start) && (!end || date <= end);
+        const matchWorker = !worker  || r.worker_name === worker;
+        const matchProj   = !project || r.project_name === project;
+        return matchDate && matchWorker && matchProj;
+      })
+      .forEach(r => {
+        const tr = document.createElement("tr");
+        const inTime  = r.clock_in  ? new Date(r.clock_in).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : "";
+        const outTime = r.clock_out ? new Date(r.clock_out).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : "";
+        tr.innerHTML = `
+          <td>${r.worker_name}</td>
+          <td>${r.phone_last5}</td>
+          <td>${r.date}</td>
+          <td>${r.project_name}</td>
+          <td>${inTime}</td>
+          <td>${outTime}</td>
+          <td>${r.hours ?? ""}</td>
+          <td>${r.pay_rate ?? ""}</td>
+          <td>${r.amount ?? ""}</td>
         `;
-        tableBody.appendChild(row);
-      }
-    });
+        tableBody.appendChild(tr);
+      });
   }
 
-  document.getElementById("applyFilters").addEventListener("click", renderTable);
-  document.getElementById("clearFilters").addEventListener("click", () => {
-    startDate.value = "";
-    endDate.value = "";
-    workerFilter.value = "";
-    projectFilter.value = "";
-    renderTable();
-  });
-
-  document.getElementById("exportCSV").addEventListener("click", () => {
-    const rows = [["Worker", "Phone", "Date", "Project", "Clock In", "Clock Out", "Hours", "Pay Rate", "Amount"]];
-    document.querySelectorAll("#reportTable tbody tr").forEach(tr => {
+  // Export visible rows as CSV
+  function exportToCSV() {
+    const rows = [["Worker","Phone","Date","Project","Clock In","Clock Out","Hours","Pay Rate","Amount"]];
+    document.querySelectorAll("#reportTable tr").forEach(tr => {
       const cols = Array.from(tr.children).map(td => td.textContent);
       rows.push(cols);
     });
-
     const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "report.csv";
-    link.click();
-  });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "time-report.csv";
+    a.click();
+  }
 
-  fetchEntries();
+  filterBtn.addEventListener("click", renderTable);
+  clearBtn.addEventListener("click", () => {
+    startDateEl.value = "";
+    endDateEl.value   = "";
+    workerFilter.value  = "";
+    projectFilter.value = "";
+    renderTable();
+  });
+  exportBtn.addEventListener("click", exportToCSV);
+
+  fetchReportData();
 });
