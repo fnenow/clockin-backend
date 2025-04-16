@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DateTime } from 'luxon';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 import db from './utils/db.js';
 import clockEntriesRoutes from './routes/clockEntries.js';
 
