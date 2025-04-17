@@ -1,64 +1,51 @@
 body {
   font-family: Arial, sans-serif;
   margin: 20px;
-  background-color: #f9f9f9;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 20px;
 }
 
-.filters {
+.controls {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  justify-content: center;
 }
 
-.filters label {
+.controls label {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
+button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
 }
 
 th, td {
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #ccc;
   text-align: left;
 }
 
 th {
-  background-color: #eaeaea;
+  background-color: #f4f4f4;
 }
 
-button {
-  padding: 6px 10px;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  cursor: pointer;
-  border-radius: 3px;
+.action-buttons {
+  display: flex;
+  gap: 5px;
 }
 
-button:hover {
-  background-color: #0056b3;
-}
-
-#pagination {
-  margin-top: 20px;
-  text-align: center;
-}
-
-#pagination button {
-  margin: 0 4px;
-  padding: 5px 10px;
+input[type="datetime-local"] {
+  width: 190px;
 }
