@@ -2,43 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Raw Clock Entries</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>FNEClock Dashboard</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #f4f4f4; }
-    .filters, .sort-controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .editable { background-color: #fdf8e4; }
-    input[type="text"], input[type="datetime-local"] {
-      width: 100%; box-sizing: border-box;
+    h1 { text-align: center; }
+    .filters { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #f4f4f4; }
+    input[type="text"], select, input[type="datetime-local"] {
+      padding: 5px; width: 100%;
     }
+    button { padding: 6px 12px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>📋 Raw Clock Entries</h1>
+  <h1>📋 FNEClock Raw Dashboard</h1>
 
   <div class="filters">
-    <label>From: <input type="date" id="startDate"></label>
-    <label>To: <input type="date" id="endDate"></label>
-    <label>Worker: <input type="text" id="workerFilter" placeholder="Worker name"></label>
-    <label>Project: <input type="text" id="projectFilter" placeholder="Project name"></label>
+    <label>From: <input type="date" id="startDate" /></label>
+    <label>To: <input type="date" id="endDate" /></label>
+    <label>Worker:
+      <select id="workerFilter">
+        <option value="">All</option>
+      </select>
+    </label>
+    <label>Project:
+      <select id="projectFilter">
+        <option value="">All</option>
+      </select>
+    </label>
     <button onclick="applyFilters()">Filter</button>
     <button onclick="clearFilters()">Clear</button>
   </div>
 
-  <div class="sort-controls">
-    <label>Sort By:
-      <select id="sortBy" onchange="applyFilters()">
-        <option value="datetime_pst">Date & Time</option>
-        <option value="project_name">Project</option>
-        <option value="worker_name">Worker</option>
-      </select>
-    </label>
-  </div>
-
-  <table id="entriesTable">
+  <table>
     <thead>
       <tr>
         <th>ID</th>
@@ -46,13 +44,143 @@
         <th>Worker</th>
         <th>Project</th>
         <th>Action</th>
-        <th>DateTime (PST)</th>
+        <th>DateTime</th>
         <th>Save</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="entryTable"></tbody>
   </table>
 
-  <script src="script.js"></script>
+  <script>
+    let allEntries = [];
+
+    async function fetchEntries() {
+      const res = await fetch('/api/clock-entries');
+      const data = await res.json();
+      allEntries = data.sort((a, b) => new Date(a.datetime_pst) - new Date(b.datetime_pst));
+      populateDropdowns(allEntries);
+      renderTable(allEntries);
+    }
+
+    function populateDropdowns(entries) {
+      const workerSet = new Set();
+      const projectSet = new Set();
+
+      entries.forEach(entry => {
+        if (entry.worker_name) workerSet.add(entry.worker_name);
+        if (entry.project_name) projectSet.add(entry.project_name);
+      });
+
+      const workerFilter = document.getElementById('workerFilter');
+      const projectFilter = document.getElementById('projectFilter');
+
+      workerFilter.innerHTML = '<option value="">All</option>';
+      [...workerSet].sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        workerFilter.appendChild(opt);
+      });
+
+      projectFilter.innerHTML = '<option value="">All</option>';
+      [...projectSet].sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        projectFilter.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const worker = document.getElementById('workerFilter').value;
+      const project = document.getElementById('projectFilter').value;
+
+      let filtered = allEntries.filter(e => {
+        const date = new Date(e.datetime_pst).toISOString().split('T')[0];
+        const matchStart = !start || date >= start;
+        const matchEnd = !end || date <= end;
+        const matchWorker = !worker || e.worker_name === worker;
+        const matchProject = !project || e.project_name === project;
+        return matchStart && matchEnd && matchWorker && matchProject;
+      });
+
+      renderTable(filtered);
+    }
+
+    function clearFilters() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('workerFilter').value = '';
+      document.getElementById('projectFilter').value = '';
+      renderTable(allEntries);
+    }
+
+    function renderTable(entries) {
+      const tbody = document.getElementById('entryTable');
+      tbody.innerHTML = '';
+
+      entries.forEach(entry => {
+        const row = document.createElement('tr');
+
+        const dateLocal = new Date(entry.datetime_pst);
+        const datetimeLocal = dateLocal.toLocaleString();
+        const datetimeInput = dateLocal.toISOString().slice(0, 16); // for input value
+
+        row.innerHTML = `
+          <td>${entry.id}</td>
+          <td><input type="text" value="${entry.phone_number}" /></td>
+          <td><input type="text" value="${entry.worker_name}" /></td>
+          <td><input type="text" value="${entry.project_name}" /></td>
+          <td>
+            <select>
+              <option value="Clock in" ${entry.action === 'Clock in' ? 'selected' : ''}>Clock in</option>
+              <option value="Clock out" ${entry.action === 'Clock out' ? 'selected' : ''}>Clock out</option>
+            </select>
+          </td>
+          <td>
+            <input type="datetime-local" value="${datetimeInput}" />
+            <div style="font-size: 0.8em; color: gray">${datetimeLocal}</div>
+          </td>
+          <td><button onclick="saveRow(${entry.id}, this)">Save</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function saveRow(id, btn) {
+      const row = btn.closest('tr');
+      const [phone, worker, project, action, datetime] = row.querySelectorAll('input, select');
+
+      const payload = {
+        phone_number: phone.value,
+        worker_name: worker.value,
+        project_name: project.value,
+        action: action.value,
+        datetime: datetime.value
+      };
+
+      try {
+        const res = await fetch(`/api/clock-entries/${id}/update-all`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert('✅ Updated!');
+          fetchEntries();
+        } else {
+          throw new Error('Failed to update');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error saving entry');
+      }
+    }
+
+    fetchEntries();
+  </script>
 </body>
 </html>
