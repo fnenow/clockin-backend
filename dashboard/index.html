@@ -1,266 +1,144 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Time Clock Dashboard</title>
+  <title>Time Clock Entries (Raw View)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .filter-bar, .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    table {
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    input[type="text"], input[type="datetime-local"] {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+      box-sizing: border-box;
     }
-    th, td {
-      padding: 8px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    th {
-      background-color: #f4f4f4;
-    }
-    button {
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    .pagination {
-      margin-top: 10px;
-    }
-    .pagination button {
-      margin-right: 5px;
-    }
-    #addModal, #overlay {
-      display: none;
-    }
-    #addModal {
-      position: fixed;
-      top: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      padding: 20px;
-      border: 1px solid #ccc;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      z-index: 1000;
-    }
-    #overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.3);
-      z-index: 999;
-    }
+    .filters { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .filters label { display: flex; flex-direction: column; }
+    .actions { margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h1>⏱️ Time Clock Dashboard</h1>
+  <h1>🗃️ Raw Clock Entries</h1>
 
-  <div class="actions">
-    <button onclick="showAddModal()">➕ Add Manual Entry</button>
-    <button onclick="exportToCSV()">📤 Export CSV</button>
-  </div>
-
-  <div class="filter-bar">
+  <div class="filters">
     <label>
-      Start Date:
-      <input type="date" id="startDate">
+      From:
+      <input type="date" id="filterStart">
     </label>
     <label>
-      End Date:
-      <input type="date" id="endDate">
+      To:
+      <input type="date" id="filterEnd">
     </label>
     <label>
       Worker:
-      <input type="text" id="workerFilter" placeholder="Name">
+      <input type="text" id="filterWorker" placeholder="Worker Name">
     </label>
     <label>
       Project:
-      <input type="text" id="projectFilter" placeholder="Project">
+      <input type="text" id="filterProject" placeholder="Project Name">
     </label>
-    <button onclick="applyFilters()">🔍 Filter</button>
-    <button onclick="clearFilters()">❌ Clear</button>
+    <button onclick="applyFilters()">Apply Filters</button>
+    <button onclick="resetFilters()">Clear</button>
   </div>
 
-  <table>
+  <table id="entriesTable">
     <thead>
       <tr>
         <th>ID</th>
-        <th>Phone Number</th>
+        <th>Phone</th>
         <th>Worker</th>
         <th>Project</th>
         <th>Action</th>
-        <th>Date & Time</th>
-        <th>Note</th>
+        <th>DateTime (PST)</th>
+        <th>Save</th>
       </tr>
     </thead>
-    <tbody id="entriesTable"></tbody>
+    <tbody></tbody>
   </table>
-
-  <div class="pagination" id="pagination"></div>
-
-  <!-- Modal -->
-  <div id="overlay" onclick="hideAddModal()"></div>
-  <div id="addModal">
-    <h3>Manual Time Entry</h3>
-    <form id="addEntryForm">
-      <label>Phone Number: <input type="text" name="phone_number" required></label><br><br>
-      <label>Worker Name: <input type="text" name="worker_name" required></label><br><br>
-      <label>Project Name: <input type="text" name="project_name" required></label><br><br>
-      <label>Action:
-        <select name="action" required>
-          <option value="Clock in">Clock in</option>
-          <option value="Clock out">Clock out</option>
-        </select>
-      </label><br><br>
-      <label>Date & Time (PST): <input type="datetime-local" name="datetime" required></label><br><br>
-      <label>Note: <input type="text" name="note"></label><br><br>
-      <button type="submit">Submit</button>
-      <button type="button" onclick="hideAddModal()">Cancel</button>
-    </form>
-  </div>
 
   <script>
     let allEntries = [];
-    let currentPage = 1;
-    const entriesPerPage = 10;
 
-    async function fetchClockEntries() {
+    async function fetchEntries() {
       const res = await fetch('/api/clock-entries');
-      allEntries = await res.json();
-      applyFilters();
+      const data = await res.json();
+      allEntries = data;
+      renderTable(data);
+    }
+
+    function renderTable(entries) {
+      const tbody = document.querySelector("#entriesTable tbody");
+      tbody.innerHTML = "";
+      entries.forEach(entry => {
+        const row = document.createElement("tr");
+        row.innerHTML = \`
+          <td>\${entry.id}</td>
+          <td><input type="text" value="\${entry.phone_number}" data-field="phone_number" data-id="\${entry.id}" /></td>
+          <td><input type="text" value="\${entry.worker_name}" data-field="worker_name" data-id="\${entry.id}" /></td>
+          <td><input type="text" value="\${entry.project_name}" data-field="project_name" data-id="\${entry.id}" /></td>
+          <td><input type="text" value="\${entry.action}" data-field="action" data-id="\${entry.id}" /></td>
+          <td><input type="datetime-local" value="\${formatForInput(entry.datetime_pst)}" data-field="datetime_pst" data-id="\${entry.id}" /></td>
+          <td><button onclick="saveEntry(\${entry.id})">💾</button></td>
+        \`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function formatForInput(dt) {
+      const date = new Date(dt);
+      return date.toISOString().slice(0, 16);
     }
 
     function applyFilters() {
-      const start = document.getElementById('startDate').value;
-      const end = document.getElementById('endDate').value;
-      const worker = document.getElementById('workerFilter').value.toLowerCase();
-      const project = document.getElementById('projectFilter').value.toLowerCase();
+      const start = document.getElementById("filterStart").value;
+      const end = document.getElementById("filterEnd").value;
+      const worker = document.getElementById("filterWorker").value.toLowerCase();
+      const project = document.getElementById("filterProject").value.toLowerCase();
 
       const filtered = allEntries.filter(entry => {
-        const rawDate = entry.datetime ?? entry.datetime_pst;
-        const dt = new Date(rawDate);
-        const matchDate = (!start || new Date(start) <= dt) && (!end || dt <= new Date(end));
-        const matchWorker = !worker || entry.worker_name?.toLowerCase().includes(worker);
-        const matchProject = !project || entry.project_name?.toLowerCase().includes(project);
-        return matchDate && matchWorker && matchProject;
+        const dt = new Date(entry.datetime_pst);
+        const dateStr = dt.toISOString().slice(0, 10);
+        return (!start || dateStr >= start) &&
+               (!end || dateStr <= end) &&
+               (!worker || entry.worker_name.toLowerCase().includes(worker)) &&
+               (!project || entry.project_name.toLowerCase().includes(project));
       });
 
-      displayEntries(filtered);
+      renderTable(filtered);
     }
 
-    function clearFilters() {
-      document.getElementById('startDate').value = '';
-      document.getElementById('endDate').value = '';
-      document.getElementById('workerFilter').value = '';
-      document.getElementById('projectFilter').value = '';
-      displayEntries(allEntries);
+    function resetFilters() {
+      document.getElementById("filterStart").value = "";
+      document.getElementById("filterEnd").value = "";
+      document.getElementById("filterWorker").value = "";
+      document.getElementById("filterProject").value = "";
+      renderTable(allEntries);
     }
 
-    function displayEntries(entries) {
-      const table = document.getElementById('entriesTable');
-      table.innerHTML = '';
-      const start = (currentPage - 1) * entriesPerPage;
-      const paginated = entries.slice(start, start + entriesPerPage);
+    async function saveEntry(id) {
+      const inputs = document.querySelectorAll('[data-id="' + id + '"]');
+      const updated = {};
+      inputs.forEach(input => {
+        updated[input.dataset.field] = input.value;
+      });
 
-      for (const entry of paginated) {
-        const datetime = new Date(entry.datetime ?? entry.datetime_pst).toLocaleString();
-        const row = `<tr>
-          <td>${entry.id}</td>
-          <td>${entry.phone_number || ''}</td>
-          <td>${entry.worker_name || ''}</td>
-          <td>${entry.project_name || ''}</td>
-          <td>${entry.action}</td>
-          <td>${datetime}</td>
-          <td>${entry.note || ''}</td>
-        </tr>`;
-        table.insertAdjacentHTML('beforeend', row);
-      }
+      const res = await fetch('/api/clock-entries/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
 
-      setupPagination(entries.length);
-    }
-
-    function setupPagination(total) {
-      const pagination = document.getElementById('pagination');
-      pagination.innerHTML = '';
-      const totalPages = Math.ceil(total / entriesPerPage);
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        if (i === currentPage) btn.disabled = true;
-        btn.onclick = () => {
-          currentPage = i;
-          applyFilters();
-        };
-        pagination.appendChild(btn);
+      if (res.ok) {
+        alert("✅ Saved!");
+        fetchEntries();
+      } else {
+        alert("❌ Failed to save.");
       }
     }
 
-    function exportToCSV() {
-      const rows = [["ID", "Phone Number", "Worker", "Project", "Action", "Date & Time", "Note"]];
-      const start = (currentPage - 1) * entriesPerPage;
-      const filtered = allEntries.slice(start, start + entriesPerPage);
-      for (let e of filtered) {
-        rows.push([
-          e.id, e.phone_number, e.worker_name, e.project_name, e.action,
-          new Date(e.datetime ?? e.datetime_pst).toLocaleString(), e.note || ''
-        ]);
-      }
-      const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "clock_entries.csv";
-      link.click();
-    }
-
-    function showAddModal() {
-      document.getElementById('addModal').style.display = 'block';
-      document.getElementById('overlay').style.display = 'block';
-    }
-
-    function hideAddModal() {
-      document.getElementById('addModal').style.display = 'none';
-      document.getElementById('overlay').style.display = 'none';
-    }
-
-    document.getElementById('addEntryForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const formData = new FormData(this);
-      const data = Object.fromEntries(formData.entries());
-
-      try {
-        const res = await fetch('/api/clock-entries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        if (!res.ok) throw new Error('Failed to add entry');
-
-        hideAddModal();
-        this.reset();
-        fetchClockEntries();
-        alert('Manual entry added!');
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    });
-
-    fetchClockEntries();
+    fetchEntries();
   </script>
 </body>
 </html>
