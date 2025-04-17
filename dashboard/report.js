@@ -87,4 +87,44 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  document.getElement
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  document.getElementById("workerFilter").value = "";
+  document.getElementById("projectFilter").value = "";
+  renderTable(allEntries);
+}
+
+function exportToCSV() {
+  const rows = [["Worker", "Phone", "Date", "Project", "Clock In", "Clock Out", "Hours", "Rate", "Amount"]];
+  document.querySelectorAll("#reportTable tbody tr").forEach(tr => {
+    const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9); // skip action column
+    const row = cols.map(td => `"${td.textContent}"`).join(",");
+    rows.push(row);
+  });
+
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "report.csv";
+  a.click();
+}
+
+async function addTime(entryId, action) {
+  const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
+  if (!datetime) return;
+
+  try {
+    const res = await fetch(`/api/clock-entries/${entryId}/add-${action.toLowerCase().replace(" ", "")}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ datetime })
+    });
+
+    if (!res.ok) throw new Error("Failed to add time");
+    alert("Time added successfully!");
+    fetchReportEntries();
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
