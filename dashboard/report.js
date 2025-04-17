@@ -114,17 +114,29 @@ async function addTime(entryId, action) {
   const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
   if (!datetime) return;
 
+  const entry = reportData.find(e => e.id === entryId);
+  if (!entry) return alert("Entry not found.");
+
+  const newEntry = {
+    phone_number: entry.phone_number,
+    worker_name: entry.worker_name,
+    project_name: entry.project_name,
+    action,
+    datetime,
+    note: `[Added ${action}]`
+  };
+
   try {
-    const res = await fetch(`/api/clock-entries/${entryId}/add-${action.toLowerCase().replace(" ", "")}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ datetime })
+    const res = await fetch('/api/clock-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEntry)
     });
 
-    if (!res.ok) throw new Error("Failed to add time");
-    alert("Time added successfully!");
+    if (!res.ok) throw new Error('Failed to add time');
+    alert('Time added successfully!');
     fetchReportEntries();
   } catch (err) {
-    alert("Error: " + err.message);
+    alert('Error: ' + err.message);
   }
 }
