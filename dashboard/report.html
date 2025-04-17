@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Time Clock Report</title>
+  <title>📋 Time Clock Report</title>
   <style>
     body { font-family: Arial; margin: 20px; }
-    h1 { text-align: center; }
+    h1   { text-align: center; }
     .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     label { display: flex; flex-direction: column; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -18,42 +18,35 @@
   <h1>📋 Time Clock Report</h1>
 
   <div class="filter-bar">
-    <label>
-      From:
-      <input type="date" id="startDate" />
+    <label>From:<input type="date"   id="startDate"  /></label>
+    <label>To:<input type="date"     id="endDate"    /></label>
+    <label>Worker:
+      <select id="workerFilter"><option value="">All</option></select>
     </label>
-    <label>
-      To:
-      <input type="date" id="endDate" />
-    </label>
-    <label>
-      Worker:
-      <select id="workerFilter"><option value="">All Workers</option></select>
-    </label>
-    <label>
-      Project:
-      <select id="projectFilter"><option value="">All Projects</option></select>
+    <label>Project:
+      <select id="projectFilter"><option value="">All</option></select>
     </label>
     <button id="filterButton">🔍 Filter</button>
     <button id="clearButton">❌ Clear</button>
-    <button id="exportButton">📤 Export</button>
+    <button id="exportButton">📤 Export CSV</button>
   </div>
 
   <table>
     <thead>
       <tr>
         <th>Worker</th>
-        <th>Phone (Last 5)</th>
+        <th>Phone (Last 5)</th>
         <th>Date</th>
         <th>Project</th>
-        <th>Clock In</th>
-        <th>Clock Out</th>
+        <th>Clock In</th>
+        <th>Clock Out</th>
         <th>Hours</th>
-        <th>Pay Rate</th>
+        <th>Pay Rate</th>
         <th>Amount</th>
+        <th>Action</th>
       </tr>
     </thead>
-    <tbody id="reportTable"><!-- rows injected here --></tbody>
+    <tbody id="reportTable"></tbody>
   </table>
 
   <script src="report.js"></script>
