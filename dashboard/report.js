@@ -1,73 +1,90 @@
+let allEntries = [];
+
 document.addEventListener("DOMContentLoaded", () => {
-  const tableBody = document.querySelector("#reportTable tbody");
-
-  async function fetchReport() {
-    const res = await fetch("/api/clock-entries/report");
-    const data = await res.json();
-    renderTable(data);
-  }
-
-  function renderTable(entries) {
-    tableBody.innerHTML = "";
-
-    entries.forEach(entry => {
-      const row = document.createElement("tr");
-
-      row.innerHTML = `
-        <td>${entry.worker_name}</td>
-        <td>${entry.phone_last5}</td>
-        <td>${entry.date}</td>
-        <td>${entry.project_name}</td>
-        <td>${entry.in_time || '<button data-action="add-in" data-worker="' + entry.worker_name + '" data-date="' + entry.date + '" data-project="' + entry.project_name + '">Add In</button>'}</td>
-        <td>${entry.out_time || '<button data-action="add-out" data-worker="' + entry.worker_name + '" data-date="' + entry.date + '" data-project="' + entry.project_name + '">Add Out</button>'}</td>
-        <td>${entry.hours || 0}</td>
-        <td>${entry.pay_rate}</td>
-        <td>${entry.amount}</td>
-      `;
-
-      tableBody.appendChild(row);
-    });
-
-    addButtonListeners();
-  }
-
-  function addButtonListeners() {
-    const buttons = document.querySelectorAll("button[data-action]");
-    buttons.forEach(button => {
-      button.addEventListener("click", async () => {
-        const action = button.getAttribute("data-action");
-        const worker = button.getAttribute("data-worker");
-        const date = button.getAttribute("data-date");
-        const project = button.getAttribute("data-project");
-
-        const time = prompt(`Enter time for ${action} (HH:mm):`);
-        if (!time) return alert("No time entered.");
-
-        const datetime = new Date(`${date}T${time}:00-07:00`).toISOString();
-
-        try {
-          const res = await fetch("/api/clock-entries", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              worker_name: worker,
-              project_name: project,
-              action: action === "add-in" ? "Clock in" : "Clock out",
-              datetime,
-              phone_number: "0000000000", // or fetch by worker_name if desired
-              note: "[manual add]"
-            })
-          });
-
-          if (!res.ok) throw new Error("Failed to add entry");
-          alert("Entry added!");
-          fetchReport();
-        } catch (err) {
-          alert("Error: " + err.message);
-        }
-      });
-    });
-  }
-
-  fetchReport();
+  fetchReportEntries();
+  document.getElementById("applyFilters").addEventListener("click", applyFilters);
+  document.getElementById("clearFilters").addEventListener("click", clearFilters);
+  document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 });
+
+async function fetchReportEntries() {
+  try {
+    const res = await fetch("/api/clock-entries/report");
+    if (!res.ok) throw new Error("Failed to fetch report data");
+    allEntries = await res.json();
+    renderTable(allEntries);
+    populateDropdowns(allEntries);
+  } catch (err) {
+    console.error("Error:", err);
+  }
+}
+
+function renderTable(entries) {
+  const tbody = document.querySelector("#reportTable tbody");
+  tbody.innerHTML = "";
+
+  for (const row of entries) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.worker_name}</td>
+      <td>${row.phone_last5}</td>
+      <td>${row.date || ""}</td>
+      <td>${row.project_name || ""}</td>
+      <td>${row.clock_in || ""}</td>
+      <td>${row.clock_out || ""}</td>
+      <td>${row.hours || 0}</td>
+      <td>${row.pay_rate || 0}</td>
+      <td>${row.pay_amount || 0}</td>
+      <td class="action-buttons">
+        ${!row.clock_in ? `<button onclick="addTime('${row.id}', 'Clock in')">Add In</button>` : ""}
+        ${!row.clock_out ? `<button onclick="addTime('${row.id}', 'Clock out')">Add Out</button>` : ""}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function populateDropdowns(entries) {
+  const workerSet = new Set();
+  const projectSet = new Set();
+
+  entries.forEach(e => {
+    if (e.worker_name) workerSet.add(e.worker_name);
+    if (e.project_name) projectSet.add(e.project_name);
+  });
+
+  const workerFilter = document.getElementById("workerFilter");
+  const projectFilter = document.getElementById("projectFilter");
+  workerFilter.innerHTML = '<option value="">All</option>';
+  projectFilter.innerHTML = '<option value="">All</option>';
+
+  [...workerSet].sort().forEach(name => {
+    workerFilter.innerHTML += `<option value="${name}">${name}</option>`;
+  });
+
+  [...projectSet].sort().forEach(name => {
+    projectFilter.innerHTML += `<option value="${name}">${name}</option>`;
+  });
+}
+
+function applyFilters() {
+  const from = document.getElementById("startDate").value;
+  const to = document.getElementById("endDate").value;
+  const worker = document.getElementById("workerFilter").value;
+  const project = document.getElementById("projectFilter").value;
+
+  let filtered = allEntries.filter(row => {
+    const rowDate = row.date;
+    return (
+      (!from || rowDate >= from) &&
+      (!to || rowDate <= to) &&
+      (!worker || row.worker_name === worker) &&
+      (!project || row.project_name === project)
+    );
+  });
+
+  renderTable(filtered);
+}
+
+function clearFilters() {
+  document.getElement
