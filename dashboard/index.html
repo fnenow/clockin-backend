@@ -67,8 +67,8 @@
       const projectSet = new Set();
 
       entries.forEach(entry => {
-        if (entry.worker_name) workerSet.add(entry.worker_name);
-        if (entry.project_name) projectSet.add(entry.project_name);
+        if (entry.worker_name) workerSet.add(entry.worker_name.toLowerCase());
+        if (entry.project_name) projectSet.add(entry.project_name.toLowerCase());
       });
 
       const workerFilter = document.getElementById('workerFilter');
@@ -78,7 +78,7 @@
       [...workerSet].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name;
+        opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
         workerFilter.appendChild(opt);
       });
 
@@ -86,30 +86,28 @@
       [...projectSet].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name;
+        opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
         projectFilter.appendChild(opt);
       });
     }
 
-function applyFilters() {
-  const worker = document.getElementById('workerFilter').value.toLowerCase();
-  const project = document.getElementById('projectFilter').value.toLowerCase();
-  const startDate = document.getElementById('startDate').value;
-  const endDate = document.getElementById('endDate').value;
+    function applyFilters() {
+      const worker = document.getElementById('workerFilter').value.toLowerCase();
+      const project = document.getElementById('projectFilter').value.toLowerCase();
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
 
-  filteredEntries = allClockEntries.filter(entry => {
-    const entryDate = new Date(entry.datetime_pst);
-    const matchWorker = !worker || (entry.worker_name || '').toLowerCase() === worker;
-    const matchProject = !project || (entry.project_name || '').toLowerCase() === project;
-    const matchStart = !startDate || new Date(startDate) <= entryDate;
-    const matchEnd = !endDate || entryDate <= new Date(endDate);
-    return matchWorker && matchProject && matchStart && matchEnd;
-  });
+      const filtered = allEntries.filter(entry => {
+        const entryDate = new Date(entry.datetime_pst);
+        const matchWorker = !worker || (entry.worker_name || '').toLowerCase() === worker;
+        const matchProject = !project || (entry.project_name || '').toLowerCase() === project;
+        const matchStart = !startDate || new Date(startDate) <= entryDate;
+        const matchEnd = !endDate || entryDate <= new Date(endDate);
+        return matchWorker && matchProject && matchStart && matchEnd;
+      });
 
-  currentPage = 1;
-  displayEntries();
-  setupPagination();
-}
+      renderTable(filtered);
+    }
 
     function clearFilters() {
       document.getElementById('startDate').value = '';
@@ -128,7 +126,7 @@ function applyFilters() {
 
         const dateLocal = new Date(entry.datetime_pst);
         const datetimeLocal = dateLocal.toLocaleString();
-        const datetimeInput = dateLocal.toISOString().slice(0, 16); // for input value
+        const datetimeInput = dateLocal.toISOString().slice(0, 16);
 
         row.innerHTML = `
           <td>${entry.id}</td>
