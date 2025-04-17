@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +15,7 @@
       padding: 5px; width: 100%;
     }
     button { padding: 6px 12px; cursor: pointer; }
+    .add-btn { margin-bottom: 15px; }
   </style>
 </head>
 <body>
@@ -36,6 +38,8 @@
     <button onclick="clearFilters()">Clear</button>
   </div>
 
+  <button class="add-btn" onclick="addNewRow()">➕ Add New Entry</button>
+
   <table>
     <thead>
       <tr>
@@ -45,7 +49,7 @@
         <th>Project</th>
         <th>Action</th>
         <th>DateTime</th>
-        <th>Save</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="entryTable"></tbody>
@@ -78,7 +82,7 @@
       [...workerSet].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        opt.textContent = name;
         workerFilter.appendChild(opt);
       });
 
@@ -86,7 +90,7 @@
       [...projectSet].sort().forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        opt.textContent = name;
         projectFilter.appendChild(opt);
       });
     }
@@ -123,10 +127,9 @@
 
       entries.forEach(entry => {
         const row = document.createElement('tr');
-
-        const dateLocal = new Date(entry.datetime_pst);
-        const datetimeLocal = dateLocal.toLocaleString();
-        const datetimeInput = dateLocal.toISOString().slice(0, 16);
+        const datetimeLocal = new Date(entry.datetime_pst);
+        const formatted = datetimeLocal.toLocaleString();
+        const inputValue = datetimeLocal.toISOString().slice(0, 16);
 
         row.innerHTML = `
           <td>${entry.id}</td>
@@ -140,13 +143,71 @@
             </select>
           </td>
           <td>
-            <input type="datetime-local" value="${datetimeInput}" />
-            <div style="font-size: 0.8em; color: gray">${datetimeLocal}</div>
+            <input type="datetime-local" value="${inputValue}" />
+            <div style="font-size: 0.8em; color: gray">${formatted}</div>
           </td>
-          <td><button onclick="saveRow(${entry.id}, this)">Save</button></td>
+          <td>
+            <button onclick="saveRow(${entry.id}, this)">💾 Save</button>
+            <button onclick="deleteRow(${entry.id})">🗑️ Delete</button>
+          </td>
         `;
         tbody.appendChild(row);
       });
+    }
+
+    function addNewRow() {
+      const now = new Date();
+      const nowISO = now.toISOString().slice(0, 16);
+      const row = document.createElement('tr');
+
+      row.innerHTML = `
+        <td>New</td>
+        <td><input type="text" /></td>
+        <td><input type="text" /></td>
+        <td><input type="text" /></td>
+        <td>
+          <select>
+            <option value="Clock in">Clock in</option>
+            <option value="Clock out">Clock out</option>
+          </select>
+        </td>
+        <td>
+          <input type="datetime-local" value="${nowISO}" />
+          <div style="font-size: 0.8em; color: gray">${now.toLocaleString()}</div>
+        </td>
+        <td>
+          <button onclick="createRow(this)">➕ Add</button>
+        </td>
+      `;
+      document.getElementById('entryTable').prepend(row);
+    }
+
+    async function createRow(btn) {
+      const row = btn.closest('tr');
+      const [phone, worker, project, action, datetime] = row.querySelectorAll('input, select');
+
+      const payload = {
+        phone_number: phone.value,
+        worker_name: worker.value,
+        project_name: project.value,
+        action: action.value,
+        datetime: datetime.value
+      };
+
+      try {
+        const res = await fetch('/api/clock-entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Failed to create');
+        alert('✅ Entry added!');
+        fetchEntries();
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error adding entry');
+      }
     }
 
     async function saveRow(id, btn) {
@@ -168,15 +229,25 @@
           body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
-          alert('✅ Updated!');
-          fetchEntries();
-        } else {
-          throw new Error('Failed to update');
-        }
+        if (!res.ok) throw new Error('Failed to update');
+        alert('✅ Updated!');
+        fetchEntries();
       } catch (err) {
         console.error(err);
         alert('❌ Error saving entry');
+      }
+    }
+
+    async function deleteRow(id) {
+      if (!confirm('Are you sure you want to delete this entry?')) return;
+      try {
+        const res = await fetch(`/api/clock-entries/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete');
+        alert('🗑️ Entry deleted!');
+        fetchEntries();
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error deleting entry');
       }
     }
 
