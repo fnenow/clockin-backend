@@ -91,23 +91,25 @@
       });
     }
 
-    function applyFilters() {
-      const start = document.getElementById('startDate').value;
-      const end = document.getElementById('endDate').value;
-      const worker = document.getElementById('workerFilter').value;
-      const project = document.getElementById('projectFilter').value;
+function applyFilters() {
+  const worker = document.getElementById('workerFilter').value.toLowerCase();
+  const project = document.getElementById('projectFilter').value.toLowerCase();
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
 
-      let filtered = allEntries.filter(e => {
-        const date = new Date(e.datetime_pst).toISOString().split('T')[0];
-        const matchStart = !start || date >= start;
-        const matchEnd = !end || date <= end;
-        const matchWorker = !worker || e.worker_name === worker;
-        const matchProject = !project || e.project_name === project;
-        return matchStart && matchEnd && matchWorker && matchProject;
-      });
+  filteredEntries = allClockEntries.filter(entry => {
+    const entryDate = new Date(entry.datetime_pst);
+    const matchWorker = !worker || (entry.worker_name || '').toLowerCase() === worker;
+    const matchProject = !project || (entry.project_name || '').toLowerCase() === project;
+    const matchStart = !startDate || new Date(startDate) <= entryDate;
+    const matchEnd = !endDate || entryDate <= new Date(endDate);
+    return matchWorker && matchProject && matchStart && matchEnd;
+  });
 
-      renderTable(filtered);
-    }
+  currentPage = 1;
+  displayEntries();
+  setupPagination();
+}
 
     function clearFilters() {
       document.getElementById('startDate').value = '';
