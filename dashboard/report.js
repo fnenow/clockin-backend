@@ -20,7 +20,7 @@ async function fetchReportEntries() {
 }
 
 function renderTable(entries) {
-  const tbody = document.querySelector("#reportTable tbody");
+  const tbody = document.querySelector("#reportTable");
   tbody.innerHTML = "";
 
   for (const row of entries) {
