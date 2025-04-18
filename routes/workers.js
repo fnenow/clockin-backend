@@ -1,83 +1,79 @@
 import express from 'express';
 import db from '../utils/db.js';
+import { DateTime } from 'luxon';
 
 const router = express.Router();
 
-// ✅ GET all current workers (latest record per phone number)
+// Get all active workers (most recent records per phone number)
 router.get('/', async (req, res) => {
   try {
-    const result = await db.query(`
-      SELECT * FROM workers
-      WHERE is_active = true
-      ORDER BY created_at DESC
+    const { rows } = await db.query(`
+      SELECT w1.*
+      FROM workers w1
+      INNER JOIN (
+        SELECT phone_number, MAX(updated_at) AS max_date
+        FROM workers
+        WHERE is_active = true
+        GROUP BY phone_number
+      ) w2 ON w1.phone_number = w2.phone_number AND w1.updated_at = w2.max_date
+      ORDER BY w1.name
     `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('❌ Failed to fetch workers:', err);
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ Error fetching workers:', error);
     res.status(500).send('Server error');
   }
 });
 
-// ✅ GET a single worker by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const result = await db.query(
-      'SELECT * FROM workers WHERE id = $1',
-      [req.params.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('❌ Failed to fetch worker:', err);
-    res.status(500).send('Server error');
-  }
-});
-
-// ✅ POST a new worker (add and deactivate older if exists)
+// Add a new worker
 router.post('/', async (req, res) => {
-  const { phone_number, name, pay_rate } = req.body;
   try {
-    // Deactivate existing records for the same phone number
-    await db.query(
-      'UPDATE workers SET is_active = false WHERE phone_number = $1',
-      [phone_number]
-    );
+    const { name, phone_number, pay_rate } = req.body;
+    const now = DateTime.now().toISO();
 
-    // Insert new worker record
-    await db.query(
-      `INSERT INTO workers (phone_number, name, pay_rate, is_active, created_at)
-       VALUES ($1, $2, $3, true, NOW())`,
-      [phone_number, name, pay_rate]
-    );
+    await db.query(`
+      INSERT INTO workers (name, phone_number, pay_rate, updated_at, is_active)
+      VALUES ($1, $2, $3, $4, true)
+    `, [name, phone_number, pay_rate, now]);
 
-    res.status(200).send('Worker created/updated');
-  } catch (err) {
-    console.error('❌ Failed to save worker:', err);
+    res.status(200).send('✅ Worker added!');
+  } catch (error) {
+    console.error('❌ Error adding worker:', error);
     res.status(500).send('Server error');
   }
 });
 
-// ✅ PATCH alternative (optional route to update by ID)
-router.post('/:id/update', async (req, res) => {
-  const { phone_number, name, pay_rate } = req.body;
-
+// Update worker (creates new row if pay_rate changed)
+router.patch('/:id', async (req, res) => {
   try {
-    // Get the original worker's phone number by ID
-    const existing = await db.query('SELECT * FROM workers WHERE id = $1', [req.params.id]);
-    if (!existing.rows.length) return res.status(404).send('Worker not found');
+    const id = req.params.id;
+    const { name, phone_number, pay_rate } = req.body;
 
-    const oldPhone = existing.rows[0].phone_number;
+    // Get existing worker
+    const { rows } = await db.query('SELECT * FROM workers WHERE id = $1', [id]);
+    const existing = rows[0];
+    if (!existing) return res.status(404).send('Worker not found');
 
-    await db.query('UPDATE workers SET is_active = false WHERE phone_number = $1', [oldPhone]);
+    const now = DateTime.now().toISO();
 
-    await db.query(
-      `INSERT INTO workers (phone_number, name, pay_rate, is_active, created_at)
-       VALUES ($1, $2, $3, true, NOW())`,
-      [phone_number, name, pay_rate]
-    );
+    if (
+      existing.name !== name ||
+      existing.phone_number !== phone_number ||
+      parseFloat(existing.pay_rate) !== parseFloat(pay_rate)
+    ) {
+      // Mark current as inactive
+      await db.query(`UPDATE workers SET is_active = false WHERE id = $1`, [id]);
 
-    res.status(200).send('Worker updated');
-  } catch (err) {
-    console.error('❌ Failed to update worker:', err);
+      // Insert new record
+      await db.query(`
+        INSERT INTO workers (name, phone_number, pay_rate, updated_at, is_active)
+        VALUES ($1, $2, $3, $4, true)
+      `, [name, phone_number, pay_rate, now]);
+    }
+
+    res.status(200).send('✅ Worker updated!');
+  } catch (error) {
+    console.error('❌ Error updating worker:', error);
     res.status(500).send('Server error');
   }
 });
