@@ -5,6 +5,8 @@ import { DateTime } from 'luxon';
 import * as cheerio from 'cheerio';
 import db from './utils/db.js';
 import clockEntriesRoutes from './routes/clockEntries.js';
+import workersRoutes from './routes/workers.js';
+
 
 const app  = express();
 const port = process.env.PORT || 8080;
@@ -16,6 +18,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 app.use('/api/clock-entries', clockEntriesRoutes);
+app.use('/api/workers', workersRoutes);
+
 
 app.post('/email', async (req, res) => {
   try {
