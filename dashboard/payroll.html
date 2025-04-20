@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payroll Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { text-align: center; }
+    .filters { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+    label { display: flex; flex-direction: column; font-weight: bold; }
+    input, select { padding: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+    th { background-color: #f4f4f4; }
+    button { padding: 8px 12px; margin-right: 10px; }
+    .summary-row td { font-weight: bold; background-color: #eaeaea; }
+  </style>
+</head>
+<body>
+  <h1>💰 Payroll Detail Report</h1>
+
+  <div class="filters">
+    <label>
+      From Date:
+      <input type="date" id="startDate" />
+    </label>
+    <label>
+      To Date:
+      <input type="date" id="endDate" />
+    </label>
+    <label>
+      Worker:
+      <select id="workerSelect">
+        <option value="">All</option>
+      </select>
+    </label>
+    <label>
+      Project:
+      <select id="projectSelect">
+        <option value="">All</option>
+      </select>
+    </label>
+    <button onclick="loadPayroll()">View Report</button>
+    <button onclick="exportToCSV()">Export CSV</button>
+  </div>
+
+  <table id="payrollTable">
+    <thead>
+      <tr>
+        <th>Worker</th>
+        <th>Phone</th>
+        <th>Project</th>
+        <th>Date</th>
+        <th>Clock In</th>
+        <th>Clock Out</th>
+        <th>Regular</th>
+        <th>Overtime</th>
+        <th>Rate</th>
+        <th>Amount</th>
+        <th>Paid Date</th>
+        <th>Exported</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadPayroll() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const worker = document.getElementById('workerSelect').value;
+      const project = document.getElementById('projectSelect').value;
+
+      const query = new URLSearchParams({ start: startDate, end: endDate, worker, project });
+      const res = await fetch('/api/payroll/detail?' + query.toString());
+      const data = await res.json();
+
+      const tbody = document.querySelector('#payrollTable tbody');
+      tbody.innerHTML = '';
+
+      let total = 0;
+
+      for (const row of data) {
+        total += parseFloat(row.amount || 0);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.worker_name}</td>
+          <td>${row.phone_last5}</td>
+          <td>${row.project_name}</td>
+          <td>${row.date}</td>
+          <td>${row.clock_in || ''}</td>
+          <td>${row.clock_out || ''}</td>
+          <td>${row.regular_time || 0}</td>
+          <td>${row.overtime || 0}</td>
+          <td>${row.pay_rate}</td>
+          <td>$${parseFloat(row.amount || 0).toFixed(2)}</td>
+          <td><input type="date" value="${row.paid_date || ''}" onchange="markPaid('${row.ids}', this.value)" /></td>
+          <td>${row.exported_at || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      const totalRow = document.createElement('tr');
+      totalRow.classList.add('summary-row');
+      totalRow.innerHTML = `<td colspan="9">TOTAL</td><td>$${total.toFixed(2)}</td><td colspan="2"></td>`;
+      tbody.appendChild(totalRow);
+    }
+
+    async function markPaid(ids, date) {
+      const res = await fetch('/api/payroll/mark-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids.split(','), date })
+      });
+
+      if (!res.ok) {
+        alert('Failed to update paid date');
+      }
+    }
+
+    function exportToCSV() {
+      const rows = Array.from(document.querySelectorAll('#payrollTable tr'));
+      const csv = rows.map(row =>
+        Array.from(row.children).map(cell => `"${cell.textContent.trim()}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'payroll_report.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
