@@ -15,48 +15,66 @@ router.get('/', async (req, res) => {
 });
 
 // ✅ GET summarized report
+
 router.get('/report', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
-        worker_name,
+        id,
+        phone_number,
         RIGHT(phone_number, 5) AS phone_last5,
+        worker_name,
         project_name,
-        DATE(datetime_pst) AS date,
-        MAX(CASE WHEN action = 'Clock in' THEN to_char(datetime_pst, 'HH24:MI') END) AS clock_in,
-        MAX(CASE WHEN action = 'Clock out' THEN to_char(datetime_pst, 'HH24:MI') END) AS clock_out,
-        MIN(CASE WHEN action = 'Clock in' THEN datetime_pst END) AS in_time,
-        MAX(CASE WHEN action = 'Clock out' THEN datetime_pst END) AS out_time,
-        MAX(pay_rate) AS pay_rate,
-        MAX(id) AS id
+        action,
+        TO_CHAR(datetime_pst::date, 'YYYY-MM-DD') AS date,
+        CASE WHEN action = 'Clock in' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_in,
+        CASE WHEN action = 'Clock out' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_out,
+        pay_rate,
+        regular_time,
+        overtime,
+        pay_amount
       FROM clock_entries
-      GROUP BY worker_name, phone_last5, project_name, date
-      ORDER BY date DESC, worker_name
+      ORDER BY worker_name, project_name, datetime_pst
     `);
 
-    const rows = result.rows.map(row => {
-      let hours = 0;
-      let amount = 0;
+    const rows = result.rows;
 
-      if (row.in_time && row.out_time) {
-        const diffMs = new Date(row.out_time) - new Date(row.in_time);
-        hours = diffMs / 1000 / 60 / 60;
-        amount = hours * row.pay_rate;
+    const grouped = {};
+
+    for (let row of rows) {
+      const key = `${row.worker_name?.toLowerCase()}|${row.project_name?.toLowerCase()}|${row.date}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          id: row.id,
+          worker_name: row.worker_name,
+          phone_last5: row.phone_last5,
+          project_name: row.project_name,
+          date: row.date,
+          clock_in: '',
+          clock_out: '',
+          hours: 0,
+          pay_rate: row.pay_rate,
+          pay_amount: 0,
+        };
       }
 
-      return {
-        ...row,
-        hours: parseFloat(hours.toFixed(2)),
-        pay_amount: parseFloat(amount.toFixed(2))
-      };
-    });
+      if (row.action === 'Clock in') {
+        grouped[key].clock_in = row.clock_in;
+      } else if (row.action === 'Clock out') {
+        grouped[key].clock_out = row.clock_out;
+      }
 
-    res.json(rows);
-  } catch (error) {
-    console.error('❌ Error generating report:', error);
+      grouped[key].pay_amount += parseFloat(row.pay_amount || 0);
+      grouped[key].hours += parseFloat(row.regular_time || 0) + parseFloat(row.overtime || 0);
+    }
+
+    res.json(Object.values(grouped));
+  } catch (err) {
+    console.error('❌ Failed to build report:', err);
     res.status(500).send('Server error');
   }
 });
+
 
 // ✅ POST - Add a new entry
 router.post('/', async (req, res) => {
