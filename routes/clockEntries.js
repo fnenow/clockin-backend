@@ -15,6 +15,59 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET report view with clock-in/clock-out pairing
+router.get('/report', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT * FROM clock_entries ORDER BY worker_name, project_name, datetime_pst
+    `);
+
+    const grouped = {};
+    for (const row of result.rows) {
+      const key = `${row.worker_name}|${row.project_name}|${row.day}-${row.month}-${row.year}`;
+      if (!grouped[key]) grouped[key] = { clock_in: null, clock_out: null, ...row };
+
+      if (row.action.toLowerCase() === 'clock in' && !grouped[key].clock_in) {
+        grouped[key].clock_in = row.datetime_pst;
+        grouped[key].in_id = row.id;
+      } else if (row.action.toLowerCase() === 'clock out' && !grouped[key].clock_out) {
+        grouped[key].clock_out = row.datetime_pst;
+        grouped[key].out_id = row.id;
+      }
+    }
+
+    const output = [];
+    for (const key in grouped) {
+      const data = grouped[key];
+      const dt = DateTime.fromISO(data.clock_in || data.clock_out || data.datetime_pst, { zone: 'America/Los_Angeles' });
+      const clockIn = data.clock_in ? DateTime.fromISO(data.clock_in).toFormat('HH:mm') : '';
+      const clockOut = data.clock_out ? DateTime.fromISO(data.clock_out).toFormat('HH:mm') : '';
+      const hours = (data.clock_in && data.clock_out)
+        ? DateTime.fromISO(data.clock_out).diff(DateTime.fromISO(data.clock_in), 'hours').hours.toFixed(2)
+        : 0;
+
+      output.push({
+        id: data.in_id || data.out_id || data.id,
+        phone_number: data.phone_number,
+        phone_last5: data.phone_number.slice(-5),
+        worker_name: data.worker_name,
+        project_name: data.project_name,
+        date: dt.toFormat('yyyy-MM-dd'),
+        clock_in: clockIn,
+        clock_out: clockOut,
+        hours,
+        pay_rate: data.pay_rate || 0,
+        pay_amount: (data.pay_rate || 0) * hours
+      });
+    }
+
+    res.json(output);
+  } catch (err) {
+    console.error('Error generating report:', err);
+    res.status(500).send('Report error');
+  }
+});
+
 // PATCH update all fields in a clock entry
 router.patch('/:id/update-all', async (req, res) => {
   const { id } = req.params;
@@ -58,7 +111,8 @@ router.post('/add', async (req, res) => {
       worker_name,
       project_name,
       action,
-      datetime
+      datetime,
+      note
     } = req.body;
 
     const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
@@ -74,12 +128,12 @@ router.post('/add', async (req, res) => {
     const { rows } = await db.query(`
       INSERT INTO clock_entries (
         phone_number, worker_name, project_name, action,
-        datetime_utc, datetime_pst, day, month, year, time
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        datetime_utc, datetime_pst, day, month, year, time, note
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *;
     `, [
       phone_number, worker_name, project_name, action,
-      datetime_utc, datetime_pst, day, month, year, time
+      datetime_utc, datetime_pst, day, month, year, time, note || ''
     ]);
 
     res.status(201).json(rows[0]);
@@ -97,60 +151,6 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting entry:', err);
     res.status(500).send('Delete failed');
-  }
-});
-// GET /api/clock-entries/report
-router.get('/report', async (req, res) => {
-  try {
-    const { rows } = await db.query(`
-      SELECT *
-      FROM clock_entries
-      ORDER BY worker_name, project_name, datetime_pst
-    `);
-
-    // Pair clock-in and out per worker/project/day
-    const pairs = [];
-    const grouped = {};
-
-    rows.forEach(entry => {
-      const key = `${entry.worker_name}|${entry.project_name}|${entry.day}-${entry.month}-${entry.year}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(entry);
-    });
-
-    for (const key in grouped) {
-      const entries = grouped[key].sort((a, b) => new Date(a.datetime_pst) - new Date(b.datetime_pst));
-      for (let i = 0; i < entries.length; i++) {
-        if (entries[i].action === 'Clock in' && entries[i + 1]?.action === 'Clock out') {
-          const clockIn = new Date(entries[i].datetime_pst);
-          const clockOut = new Date(entries[i + 1].datetime_pst);
-          const hours = (clockOut - clockIn) / (1000 * 60 * 60); // milliseconds to hours
-
-          pairs.push({
-            worker_name: entries[i].worker_name,
-            phone_last5: entries[i].phone_number?.slice(-5),
-            date: `${entries[i].month}/${entries[i].day}/${entries[i].year}`,
-            project_name: entries[i].project_name,
-            clock_in: clockIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            clock_out: clockOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            hours: hours.toFixed(2),
-            pay_rate: entries[i].pay_rate,
-            amount: (hours * entries[i].pay_rate).toFixed(2),
-            clock_in_id: entries[i].id,
-            clock_out_id: entries[i + 1].id,
-            paid: entries[i].paid || false,
-            exported: entries[i].exported || false
-          });
-
-          i++; // Skip the next item (we already paired it)
-        }
-      }
-    }
-
-    res.json(pairs);
-  } catch (err) {
-    console.error('❌ Error building report:', err);
-    res.status(500).send('Server error while generating report');
   }
 });
 
