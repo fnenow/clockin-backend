@@ -8,8 +8,15 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function formatTime(timeStr) {
-  return timeStr || '';
+  if (!timeStr) return '';
+  try {
+    const date = new Date(timeStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
+
 
 
 function formatDate(dateString) {
