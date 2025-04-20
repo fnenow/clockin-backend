@@ -149,12 +149,12 @@ async function addTime(entryId, action) {
   const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
   if (!datetime) return;
 
-  // Find entry by phone/project/date combo
-  const entry = allEntries.find(e => e.id === Number(entryId));
+  // Find entry by ID
+  const entry = allEntries.find(e => Number(e.id) === Number(entryId));
   if (!entry) return alert("Entry not found.");
 
   const newEntry = {
-    phone_number: entry.phone_number,
+    phone_number: entry.phone_number || '',  // fallback if missing
     worker_name: entry.worker_name,
     project_name: entry.project_name,
     action,
@@ -171,9 +171,10 @@ async function addTime(entryId, action) {
 
     if (!res.ok) throw new Error('Failed to add time');
     alert('Time added successfully!');
-    fetchReportEntries(); // refresh table
+    fetchReportEntries();
   } catch (err) {
     alert('Error: ' + err.message);
   }
 }
+
 
