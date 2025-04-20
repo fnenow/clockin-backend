@@ -8,16 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function formatTime(timeStr) {
-  if (!timeStr) return '';
-  const time = typeof timeStr === 'string' && timeStr.includes('T')
-    ? new Date(timeStr)
-    : timeStr;
-  try {
-    return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '';
-  }
+  return timeStr || '';
 }
+
 
 function formatDate(dateString) {
   if (!dateString) return '';
