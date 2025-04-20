@@ -7,6 +7,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 });
 
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  const time = typeof timeStr === 'string' && timeStr.includes('T')
+    ? new Date(timeStr)
+    : timeStr;
+  try {
+    return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
 function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -74,8 +86,8 @@ function renderTable(entries) {
       <td>${row.phone_last5}</td>
       <td>${formatDate(row.date)}</td>
       <td>${row.project_name || ""}</td>
-      <td>${row.clock_in || ""}</td>
-      <td>${row.clock_out || ""}</td>
+      <td>${formatTime(row.clock_in)}</td>
+      <td>${formatTime(row.clock_out)}</td>
       <td>${row.hours || 0}</td>
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
