@@ -1,7 +1,8 @@
 import express from 'express';
 import db from '../utils/db.js';
-import { DateTime } from 'luxon';
+import * as luxon from 'luxon'; // Correct import for ESM
 
+const { DateTime } = luxon;
 const router = express.Router();
 
 // ✅ GET raw entries (used by dashboard)
@@ -27,8 +28,8 @@ router.get('/report', async (req, res) => {
         project_name,
         action,
         TO_CHAR(datetime_pst::date, 'YYYY-MM-DD') AS date,
-        CASE WHEN action = 'Clock in' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_in,
-        CASE WHEN action = 'Clock out' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_out,
+        CASE WHEN action = 'Clock in' THEN datetime_pst END AS clock_in,
+        CASE WHEN action = 'Clock out' THEN datetime_pst END AS clock_out,
         pay_rate,
         regular_time,
         overtime,
@@ -86,39 +87,41 @@ router.post('/', async (req, res) => {
       note
     } = req.body;
 
-    // Convert input datetime to Luxon object in PST
-import { DateTime } from 'luxon';
+    const dt = DateTime.fromISO(datetime, { zone: 'utc' });
+    const pst = dt.setZone('America/Los_Angeles');
 
-// Inside your POST handler:
-const dt = DateTime.fromISO(datetime); // this is user input, assumed ISO
-const pst = dt.setZone('America/Los_Angeles');
+    const utcDateTime = dt.toUTC().toISO();         // for datetime_utc
+    const pstDateTime = pst.toISO();                // for datetime_pst
 
-const utcDateTime = dt.toUTC().toISO();         // Save as UTC
-const pstDateTime = pst.toISO();                // Save as PST-local
+    const day = pst.day;
+    const month = pst.month;
+    const year = pst.year;
+    const time = pst.toFormat('HH:mm');
 
-const day = pst.day;
-const month = pst.month;
-const year = pst.year;
-const time = pst.toFormat('HH:mm');
-
-
-    // Get pay rate from latest worker record
+    // Get latest pay rate
     const payResult = await db.query(
       'SELECT pay_rate FROM workers WHERE name ILIKE $1 ORDER BY id DESC LIMIT 1',
       [worker_name]
     );
     const payRate = payResult.rows[0] ? payResult.rows[0].pay_rate : 15;
 
-await db.query(`
-  INSERT INTO clock_entries (
-    phone_number, worker_name, project_name, action,
-    datetime_utc, datetime_pst, day, month, year, time,
-    note, pay_rate
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-`, [
-  phone_number, worker_name, project_name, action,
-  utcDateTime, pstDateTime,
-  day, month, year, time, note, payRate
-]);
+    await db.query(`
+      INSERT INTO clock_entries (
+        phone_number, worker_name, project_name, action,
+        datetime_utc, datetime_pst, day, month, year, time,
+        note, pay_rate
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `, [
+      phone_number, worker_name, project_name, action,
+      utcDateTime, pstDateTime,
+      day, month, year, time, note, payRate
+    ]);
+
+    res.status(200).send('Entry created');
+  } catch (error) {
+    console.error('❌ Error creating entry:', error);
+    res.status(500).send('Server error');
+  }
+});
 
 export default router;
