@@ -87,6 +87,7 @@ function applyFilters() {
   renderTable(filtered);
 }
 
+
 function clearFilters() {
   document.getElementById("startDate").value = "";
   document.getElementById("endDate").value = "";
