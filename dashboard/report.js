@@ -1,4 +1,5 @@
 let allEntries = [];
+let reportData = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchReportEntries();
@@ -11,7 +12,8 @@ async function fetchReportEntries() {
   try {
     const res = await fetch("/api/clock-entries/report");
     if (!res.ok) throw new Error("Failed to fetch report data");
-    allEntries = await res.json();
+    reportData = await res.json();
+    allEntries = [...reportData];
     renderTable(allEntries);
     populateDropdowns(allEntries);
   } catch (err) {
@@ -36,8 +38,8 @@ function renderTable(entries) {
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
       <td class="action-buttons">
-        ${!row.clock_in ? `<button onclick="addTime('${row.id}', 'Clock in')">Add In</button>` : ""}
-        ${!row.clock_out ? `<button onclick="addTime('${row.id}', 'Clock out')">Add Out</button>` : ""}
+        ${!row.clock_in ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', '${row.date}', 'Clock in')">Add In</button>` : ""}
+        ${!row.clock_out ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', '${row.date}', 'Clock out')">Add Out</button>` : ""}
       </td>
     `;
     tbody.appendChild(tr);
@@ -70,16 +72,16 @@ function populateDropdowns(entries) {
 function applyFilters() {
   const from = document.getElementById("startDate").value;
   const to = document.getElementById("endDate").value;
-  const worker = document.getElementById("workerFilter").value;
-  const project = document.getElementById("projectFilter").value;
+  const worker = document.getElementById("workerFilter").value.toLowerCase();
+  const project = document.getElementById("projectFilter").value.toLowerCase();
 
   let filtered = allEntries.filter(row => {
     const rowDate = row.date;
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || row.worker_name === worker) &&
-      (!project || row.project_name === project)
+      (!worker || (row.worker_name || "").toLowerCase() === worker) &&
+      (!project || (row.project_name || "").toLowerCase() === project)
     );
   });
 
@@ -110,17 +112,15 @@ function exportToCSV() {
   a.click();
 }
 
-async function addTime(entryId, action) {
-  const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
-  if (!datetime) return;
-
-  const entry = reportData.find(e => e.id === entryId);
-  if (!entry) return alert("Entry not found.");
+async function addTime(phone_number, worker_name, project_name, date, action) {
+  const time = prompt(`Enter ${action} time (HH:mm):`);
+  if (!time) return;
+  const datetime = `${date}T${time}`;
 
   const newEntry = {
-    phone_number: entry.phone_number,
-    worker_name: entry.worker_name,
-    project_name: entry.project_name,
+    phone_number,
+    worker_name,
+    project_name,
     action,
     datetime,
     note: `[Added ${action}]`
@@ -134,9 +134,9 @@ async function addTime(entryId, action) {
     });
 
     if (!res.ok) throw new Error('Failed to add time');
-    alert('Time added successfully!');
+    alert('✅ Time added successfully!');
     fetchReportEntries();
   } catch (err) {
-    alert('Error: ' + err.message);
+    alert('❌ Error: ' + err.message);
   }
 }
