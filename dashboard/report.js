@@ -79,8 +79,8 @@ function applyFilters() {
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || row.worker_name === worker) &&
-      (!project || row.project_name === project)
+      (!worker || row.worker_name?.toLowerCase() === worker.toLowerCase()) &&
+      (!project || row.project_name?.toLowerCase() === project.toLowerCase())
     );
   });
 
