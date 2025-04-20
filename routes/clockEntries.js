@@ -87,13 +87,20 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     // Convert input datetime to Luxon object in PST
-    const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
-    const utcDate = dt.toUTC().toISO();
-    const pstDate = dt.toISO();
-    const day = dt.day;
-    const month = dt.month;
-    const year = dt.year;
-    const time = dt.toFormat('HH:mm');
+import { DateTime } from 'luxon';
+
+// Inside your POST handler:
+const dt = DateTime.fromISO(datetime); // this is user input, assumed ISO
+const pst = dt.setZone('America/Los_Angeles');
+
+const utcDateTime = dt.toUTC().toISO();         // Save as UTC
+const pstDateTime = pst.toISO();                // Save as PST-local
+
+const day = pst.day;
+const month = pst.month;
+const year = pst.year;
+const time = pst.toFormat('HH:mm');
+
 
     // Get pay rate from latest worker record
     const payResult = await db.query(
@@ -102,22 +109,16 @@ router.post('/', async (req, res) => {
     );
     const payRate = payResult.rows[0] ? payResult.rows[0].pay_rate : 15;
 
-    await db.query(`
-      INSERT INTO clock_entries (
-        phone_number, worker_name, project_name, action,
-        datetime_utc, datetime_pst, day, month, year, time,
-        note, pay_rate
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-    `, [
-      phone_number, worker_name, project_name, action,
-      utcDate, pstDate, day, month, year, time, note, payRate
-    ]);
-
-    res.status(200).send('Entry created');
-  } catch (error) {
-    console.error('❌ Error creating entry:', error);
-    res.status(500).send('Server error');
-  }
-});
+await db.query(`
+  INSERT INTO clock_entries (
+    phone_number, worker_name, project_name, action,
+    datetime_utc, datetime_pst, day, month, year, time,
+    note, pay_rate
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+`, [
+  phone_number, worker_name, project_name, action,
+  utcDateTime, pstDateTime,
+  day, month, year, time, note, payRate
+]);
 
 export default router;
