@@ -18,6 +18,7 @@ router.get('/', async (req, res) => {
 
 router.get('/report', async (req, res) => {
   try {
+    const time = DateTime.fromISO(entry.datetime_pst, { zone: 'America/Los_Angeles' }).toISO();
     const result = await db.query(`
       SELECT 
         id,
