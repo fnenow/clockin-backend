@@ -137,6 +137,7 @@ async function addTime(entryId, action) {
   const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
   if (!datetime) return;
 
+  // Find entry by phone/project/date combo
   const entry = allEntries.find(e => e.id === entryId);
   if (!entry) return alert("Entry not found.");
 
@@ -158,8 +159,9 @@ async function addTime(entryId, action) {
 
     if (!res.ok) throw new Error('Failed to add time');
     alert('Time added successfully!');
-    fetchReportEntries();
+    fetchReportEntries(); // refresh table
   } catch (err) {
     alert('Error: ' + err.message);
   }
 }
+
