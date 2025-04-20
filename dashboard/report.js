@@ -138,7 +138,7 @@ async function addTime(entryId, action) {
   if (!datetime) return;
 
   // Find entry by phone/project/date combo
-  const entry = allEntries.find(e => e.id === entryId);
+  const entry = allEntries.find(e => e.id === Number(entryId));
   if (!entry) return alert("Entry not found.");
 
   const newEntry = {
