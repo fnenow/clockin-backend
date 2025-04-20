@@ -112,31 +112,34 @@ function exportToCSV() {
   a.click();
 }
 
-async function addTime(phone_number, worker_name, project_name, date, action) {
-  const time = prompt(`Enter ${action} time (HH:mm):`);
-  if (!time) return;
-  const datetime = `${date}T${time}`;
+async function addTime(entryId, action) {
+  const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
+  if (!datetime) return;
+
+  const entry = allEntries.find(e => e.id === entryId);
+  if (!entry) return alert("Entry not found.");
 
   const newEntry = {
-    phone_number,
-    worker_name,
-    project_name,
+    phone_number: entry.phone_number,
+    worker_name: entry.worker_name,
+    project_name: entry.project_name,
     action,
     datetime,
     note: `[Added ${action}]`
   };
 
   try {
-    const res = await fetch('/api/clock-entries', {
+    const res = await fetch('/api/clock-entries/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEntry)
     });
 
     if (!res.ok) throw new Error('Failed to add time');
-    alert('✅ Time added successfully!');
+    alert('Time added successfully!');
     fetchReportEntries();
   } catch (err) {
-    alert('❌ Error: ' + err.message);
+    alert('Error: ' + err.message);
   }
 }
+
