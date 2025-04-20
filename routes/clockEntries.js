@@ -55,6 +55,7 @@ router.get('/report', async (req, res) => {
           hours: 0,
           pay_rate: row.pay_rate,
           pay_amount: 0,
+          phone_number: row.phone_number,
         };
       }
 
