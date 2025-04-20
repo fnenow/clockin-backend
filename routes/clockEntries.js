@@ -99,5 +99,59 @@ router.delete('/:id', async (req, res) => {
     res.status(500).send('Delete failed');
   }
 });
+// GET /api/clock-entries/report
+router.get('/report', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT *
+      FROM clock_entries
+      ORDER BY worker_name, project_name, datetime_pst
+    `);
+
+    // Pair clock-in and out per worker/project/day
+    const pairs = [];
+    const grouped = {};
+
+    rows.forEach(entry => {
+      const key = `${entry.worker_name}|${entry.project_name}|${entry.day}-${entry.month}-${entry.year}`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(entry);
+    });
+
+    for (const key in grouped) {
+      const entries = grouped[key].sort((a, b) => new Date(a.datetime_pst) - new Date(b.datetime_pst));
+      for (let i = 0; i < entries.length; i++) {
+        if (entries[i].action === 'Clock in' && entries[i + 1]?.action === 'Clock out') {
+          const clockIn = new Date(entries[i].datetime_pst);
+          const clockOut = new Date(entries[i + 1].datetime_pst);
+          const hours = (clockOut - clockIn) / (1000 * 60 * 60); // milliseconds to hours
+
+          pairs.push({
+            worker_name: entries[i].worker_name,
+            phone_last5: entries[i].phone_number?.slice(-5),
+            date: `${entries[i].month}/${entries[i].day}/${entries[i].year}`,
+            project_name: entries[i].project_name,
+            clock_in: clockIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            clock_out: clockOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            hours: hours.toFixed(2),
+            pay_rate: entries[i].pay_rate,
+            amount: (hours * entries[i].pay_rate).toFixed(2),
+            clock_in_id: entries[i].id,
+            clock_out_id: entries[i + 1].id,
+            paid: entries[i].paid || false,
+            exported: entries[i].exported || false
+          });
+
+          i++; // Skip the next item (we already paired it)
+        }
+      }
+    }
+
+    res.json(pairs);
+  } catch (err) {
+    console.error('❌ Error building report:', err);
+    res.status(500).send('Server error while generating report');
+  }
+});
 
 export default router;
