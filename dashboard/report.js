@@ -3,9 +3,9 @@ let allEntries = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchReportEntries();
-  document.getElementById("applyFilters").addEventListener("click", applyFilters);
-  document.getElementById("clearFilters").addEventListener("click", clearFilters);
-  document.getElementById("exportCSV").addEventListener("click", exportToCSV);
+  document.getElementById("filterButton").addEventListener("click", applyFilters);
+  document.getElementById("clearButton").addEventListener("click", clearFilters);
+  document.getElementById("exportButton").addEventListener("click", exportToCSV);
 });
 
 async function fetchReportEntries() {
@@ -37,8 +37,8 @@ function renderTable(entries) {
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
       <td class="action-buttons">
-        ${!row.clock_in ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock in')">Add In</button>` : ""}
-        ${!row.clock_out ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock out')">Add Out</button>` : ""}
+        ${!row.clock_in ? `<button onclick="addTime('${row.id}', 'Clock in')">Add In</button>` : ""}
+        ${!row.clock_out ? `<button onclick="addTime('${row.id}', 'Clock out')">Add Out</button>` : ""}
       </td>
     `;
     tbody.appendChild(tr);
@@ -46,26 +46,25 @@ function renderTable(entries) {
 }
 
 function populateDropdowns(entries) {
-  const workerSet = new Set();
-  const projectSet = new Set();
+  const workerMap = new Map();
+  const projectMap = new Map();
 
-entries.forEach(e => {
-  if (e.worker_name) workerSet.add(e.worker_name.trim().toLowerCase());
-  if (e.project_name) projectSet.add(e.project_name.trim().toLowerCase());
-});
-
+  entries.forEach(e => {
+    if (e.worker_name) workerMap.set(e.worker_name.toLowerCase(), e.worker_name);
+    if (e.project_name) projectMap.set(e.project_name.toLowerCase(), e.project_name);
+  });
 
   const workerFilter = document.getElementById("workerFilter");
   const projectFilter = document.getElementById("projectFilter");
   workerFilter.innerHTML = '<option value="">All</option>';
   projectFilter.innerHTML = '<option value="">All</option>';
 
-  [...workerSet].sort().forEach(name => {
-    workerFilter.innerHTML += `<option value="${name}">${name}</option>`;
+  [...workerMap.entries()].sort().forEach(([key, val]) => {
+    workerFilter.innerHTML += `<option value="${key}">${val}</option>`;
   });
 
-  [...projectSet].sort().forEach(name => {
-    projectFilter.innerHTML += `<option value="${name}">${name}</option>`;
+  [...projectMap.entries()].sort().forEach(([key, val]) => {
+    projectFilter.innerHTML += `<option value="${key}">${val}</option>`;
   });
 }
 
@@ -80,14 +79,13 @@ function applyFilters() {
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || row.worker_name?.toLowerCase() === worker.toLowerCase()) &&
-      (!project || row.project_name?.toLowerCase() === project.toLowerCase())
+      (!worker || row.worker_name?.toLowerCase() === worker) &&
+      (!project || row.project_name?.toLowerCase() === project)
     );
   });
 
   renderTable(filtered);
 }
-
 
 function clearFilters() {
   document.getElementById("startDate").value = "";
@@ -100,7 +98,7 @@ function clearFilters() {
 function exportToCSV() {
   const rows = [["Worker", "Phone", "Date", "Project", "Clock In", "Clock Out", "Hours", "Rate", "Amount"]];
   document.querySelectorAll("#reportTable tbody tr").forEach(tr => {
-    const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9);
+    const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9); // skip action column
     const row = cols.map(td => `"${td.textContent}"`).join(",");
     rows.push(row);
   });
@@ -113,14 +111,17 @@ function exportToCSV() {
   a.click();
 }
 
-async function addTime(phone_number, worker_name, project_name, action) {
+async function addTime(entryId, action) {
   const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
   if (!datetime) return;
 
+  const entry = allEntries.find(e => e.id === entryId);
+  if (!entry) return alert("Entry not found.");
+
   const newEntry = {
-    phone_number,
-    worker_name,
-    project_name,
+    phone_number: entry.phone_number,
+    worker_name: entry.worker_name,
+    project_name: entry.project_name,
     action,
     datetime,
     note: `[Added ${action}]`
