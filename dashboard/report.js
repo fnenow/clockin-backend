@@ -1,10 +1,11 @@
+
 let allEntries = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchReportEntries();
-  document.getElementById("filterButton").addEventListener("click", applyFilters);
-  document.getElementById("clearButton").addEventListener("click", clearFilters);
-  document.getElementById("exportButton").addEventListener("click", exportToCSV);
+  document.getElementById("applyFilters").addEventListener("click", applyFilters);
+  document.getElementById("clearFilters").addEventListener("click", clearFilters);
+  document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 });
 
 async function fetchReportEntries() {
@@ -20,14 +21,14 @@ async function fetchReportEntries() {
 }
 
 function renderTable(entries) {
-  const tbody = document.getElementById("reportTable");
+  const tbody = document.querySelector("#reportTable");
   tbody.innerHTML = "";
 
   for (const row of entries) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${row.worker_name || ""}</td>
-      <td>${row.phone_last5 || ""}</td>
+      <td>${row.worker_name}</td>
+      <td>${row.phone_last5}</td>
       <td>${row.date || ""}</td>
       <td>${row.project_name || ""}</td>
       <td>${row.clock_in || ""}</td>
@@ -35,7 +36,7 @@ function renderTable(entries) {
       <td>${row.hours || 0}</td>
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
-      <td>
+      <td class="action-buttons">
         ${!row.clock_in ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock in')">Add In</button>` : ""}
         ${!row.clock_out ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock out')">Add Out</button>` : ""}
       </td>
@@ -73,10 +74,11 @@ function applyFilters() {
   const worker = document.getElementById("workerFilter").value;
   const project = document.getElementById("projectFilter").value;
 
-  const filtered = allEntries.filter(row => {
+  let filtered = allEntries.filter(row => {
+    const rowDate = row.date;
     return (
-      (!from || row.date >= from) &&
-      (!to || row.date <= to) &&
+      (!from || rowDate >= from) &&
+      (!to || rowDate <= to) &&
       (!worker || row.worker_name === worker) &&
       (!project || row.project_name === project)
     );
@@ -97,7 +99,7 @@ function exportToCSV() {
   const rows = [["Worker", "Phone", "Date", "Project", "Clock In", "Clock Out", "Hours", "Rate", "Amount"]];
   document.querySelectorAll("#reportTable tbody tr").forEach(tr => {
     const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9);
-    const row = cols.map(td => `"${td.textContent.trim()}"`).join(",");
+    const row = cols.map(td => `"${td.textContent}"`).join(",");
     rows.push(row);
   });
 
@@ -123,16 +125,16 @@ async function addTime(phone_number, worker_name, project_name, action) {
   };
 
   try {
-    const res = await fetch("/api/clock-entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/clock-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEntry)
     });
 
-    if (!res.ok) throw new Error("Failed to add time");
-    alert("Time added successfully!");
+    if (!res.ok) throw new Error('Failed to add time');
+    alert('Time added successfully!');
     fetchReportEntries();
   } catch (err) {
-    alert("Error: " + err.message);
+    alert('Error: ' + err.message);
   }
 }
