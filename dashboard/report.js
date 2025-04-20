@@ -49,10 +49,11 @@ function populateDropdowns(entries) {
   const workerSet = new Set();
   const projectSet = new Set();
 
-  entries.forEach(e => {
-    if (e.worker_name) workerSet.add(e.worker_name);
-    if (e.project_name) projectSet.add(e.project_name);
-  });
+entries.forEach(e => {
+  if (e.worker_name) workerSet.add(e.worker_name.trim().toLowerCase());
+  if (e.project_name) projectSet.add(e.project_name.trim().toLowerCase());
+});
+
 
   const workerFilter = document.getElementById("workerFilter");
   const projectFilter = document.getElementById("projectFilter");
