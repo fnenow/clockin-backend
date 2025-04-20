@@ -1,4 +1,3 @@
-
 let allEntries = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -20,6 +19,39 @@ async function fetchReportEntries() {
   }
 }
 
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function populateDropdowns(entries) {
+  const workerMap = new Map();
+  const projectMap = new Map();
+
+  entries.forEach(e => {
+    if (e.worker_name) {
+      const key = e.worker_name.toLowerCase();
+      if (!workerMap.has(key)) workerMap.set(key, capitalize(e.worker_name));
+    }
+    if (e.project_name) {
+      const key = e.project_name.toLowerCase();
+      if (!projectMap.has(key)) projectMap.set(key, capitalize(e.project_name));
+    }
+  });
+
+  const workerFilter = document.getElementById("workerFilter");
+  const projectFilter = document.getElementById("projectFilter");
+  workerFilter.innerHTML = '<option value="">All</option>';
+  projectFilter.innerHTML = '<option value="">All</option>';
+
+  [...workerMap.entries()].sort().forEach(([key, value]) => {
+    workerFilter.innerHTML += `<option value="${key}">${value}</option>`;
+  });
+
+  [...projectMap.entries()].sort().forEach(([key, value]) => {
+    projectFilter.innerHTML += `<option value="${key}">${value}</option>`;
+  });
+}
+
 function renderTable(entries) {
   const tbody = document.querySelector("#reportTable");
   tbody.innerHTML = "";
@@ -37,57 +69,34 @@ function renderTable(entries) {
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
       <td class="action-buttons">
-        ${!row.clock_in ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock in')">Add In</button>` : ""}
-        ${!row.clock_out ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', 'Clock out')">Add Out</button>` : ""}
+        ${!row.clock_in ? `<button onclick="addTime('${row.id}', 'Clock in')">Add In</button>` : ""}
+        ${!row.clock_out ? `<button onclick="addTime('${row.id}', 'Clock out')">Add Out</button>` : ""}
       </td>
     `;
     tbody.appendChild(tr);
   }
 }
 
-function populateDropdowns(entries) {
-  const workerSet = new Set();
-  const projectSet = new Set();
-
-entries.forEach(e => {
-  if (e.worker_name) workerSet.add(e.worker_name.trim().toLowerCase());
-  if (e.project_name) projectSet.add(e.project_name.trim().toLowerCase());
-});
-
-
-  const workerFilter = document.getElementById("workerFilter");
-  const projectFilter = document.getElementById("projectFilter");
-  workerFilter.innerHTML = '<option value="">All</option>';
-  projectFilter.innerHTML = '<option value="">All</option>';
-
-  [...workerSet].sort().forEach(name => {
-    workerFilter.innerHTML += `<option value="${name}">${name}</option>`;
-  });
-
-  [...projectSet].sort().forEach(name => {
-    projectFilter.innerHTML += `<option value="${name}">${name}</option>`;
-  });
-}
-
 function applyFilters() {
   const from = document.getElementById("startDate").value;
   const to = document.getElementById("endDate").value;
-  const worker = document.getElementById("workerFilter").value;
-  const project = document.getElementById("projectFilter").value;
+  const worker = document.getElementById("workerFilter").value.toLowerCase();
+  const project = document.getElementById("projectFilter").value.toLowerCase();
 
-  let filtered = allEntries.filter(row => {
+  const filtered = allEntries.filter(row => {
     const rowDate = row.date;
+    const rowWorker = (row.worker_name || "").toLowerCase();
+    const rowProject = (row.project_name || "").toLowerCase();
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || row.worker_name?.toLowerCase() === worker.toLowerCase()) &&
-      (!project || row.project_name?.toLowerCase() === project.toLowerCase())
+      (!worker || rowWorker === worker) &&
+      (!project || rowProject === project)
     );
   });
 
   renderTable(filtered);
 }
-
 
 function clearFilters() {
   document.getElementById("startDate").value = "";
@@ -113,14 +122,17 @@ function exportToCSV() {
   a.click();
 }
 
-async function addTime(phone_number, worker_name, project_name, action) {
+async function addTime(entryId, action) {
   const datetime = prompt(`Enter ${action} time (YYYY-MM-DDTHH:mm):`);
   if (!datetime) return;
 
+  const entry = allEntries.find(e => e.id === entryId);
+  if (!entry) return alert("Entry not found.");
+
   const newEntry = {
-    phone_number,
-    worker_name,
-    project_name,
+    phone_number: entry.phone_number,
+    worker_name: entry.worker_name,
+    project_name: entry.project_name,
     action,
     datetime,
     note: `[Added ${action}]`
