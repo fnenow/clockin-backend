@@ -79,14 +79,13 @@ function applyFilters() {
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || row.worker_name?.toLowerCase() === worker.toLowerCase()) &&
-      (!project || row.project_name?.toLowerCase() === project.toLowerCase())
+      (!worker || row.worker_name === worker) &&
+      (!project || row.project_name === project)
     );
   });
 
   renderTable(filtered);
 }
-
 
 function clearFilters() {
   document.getElementById("startDate").value = "";
