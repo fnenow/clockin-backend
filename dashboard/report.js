@@ -1,19 +1,17 @@
 let allEntries = [];
-let reportData = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchReportEntries();
-  document.getElementById("applyFilters").addEventListener("click", applyFilters);
-  document.getElementById("clearFilters").addEventListener("click", clearFilters);
-  document.getElementById("exportCSV").addEventListener("click", exportToCSV);
+  document.getElementById("filterButton").addEventListener("click", applyFilters);
+  document.getElementById("clearButton").addEventListener("click", clearFilters);
+  document.getElementById("exportButton").addEventListener("click", exportToCSV);
 });
 
 async function fetchReportEntries() {
   try {
     const res = await fetch("/api/clock-entries/report");
     if (!res.ok) throw new Error("Failed to fetch report data");
-    reportData = await res.json();
-    allEntries = [...reportData];
+    allEntries = await res.json();
     renderTable(allEntries);
     populateDropdowns(allEntries);
   } catch (err) {
@@ -26,6 +24,8 @@ function renderTable(entries) {
   tbody.innerHTML = "";
 
   for (const row of entries) {
+    const rowId = row.id || ''; // fallback for safety
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${row.worker_name}</td>
@@ -38,8 +38,8 @@ function renderTable(entries) {
       <td>${row.pay_rate || 0}</td>
       <td>${row.pay_amount || 0}</td>
       <td class="action-buttons">
-        ${!row.clock_in ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', '${row.date}', 'Clock in')">Add In</button>` : ""}
-        ${!row.clock_out ? `<button onclick="addTime('${row.phone_number}', '${row.worker_name}', '${row.project_name}', '${row.date}', 'Clock out')">Add Out</button>` : ""}
+        ${!row.clock_in ? `<button onclick="addTime('${rowId}', 'Clock in')">Add In</button>` : ""}
+        ${!row.clock_out ? `<button onclick="addTime('${rowId}', 'Clock out')">Add Out</button>` : ""}
       </td>
     `;
     tbody.appendChild(tr);
@@ -72,16 +72,16 @@ function populateDropdowns(entries) {
 function applyFilters() {
   const from = document.getElementById("startDate").value;
   const to = document.getElementById("endDate").value;
-  const worker = document.getElementById("workerFilter").value.toLowerCase();
-  const project = document.getElementById("projectFilter").value.toLowerCase();
+  const worker = document.getElementById("workerFilter").value;
+  const project = document.getElementById("projectFilter").value;
 
   let filtered = allEntries.filter(row => {
     const rowDate = row.date;
     return (
       (!from || rowDate >= from) &&
       (!to || rowDate <= to) &&
-      (!worker || (row.worker_name || "").toLowerCase() === worker) &&
-      (!project || (row.project_name || "").toLowerCase() === project)
+      (!worker || row.worker_name === worker) &&
+      (!project || row.project_name === project)
     );
   });
 
@@ -99,7 +99,7 @@ function clearFilters() {
 function exportToCSV() {
   const rows = [["Worker", "Phone", "Date", "Project", "Clock In", "Clock Out", "Hours", "Rate", "Amount"]];
   document.querySelectorAll("#reportTable tbody tr").forEach(tr => {
-    const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9); // skip action column
+    const cols = Array.from(tr.querySelectorAll("td")).slice(0, 9);
     const row = cols.map(td => `"${td.textContent}"`).join(",");
     rows.push(row);
   });
@@ -129,7 +129,7 @@ async function addTime(entryId, action) {
   };
 
   try {
-    const res = await fetch('/api/clock-entries/add', {
+    const res = await fetch('/api/clock-entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newEntry)
@@ -142,4 +142,3 @@ async function addTime(entryId, action) {
     alert('Error: ' + err.message);
   }
 }
-
