@@ -2,10 +2,9 @@ import express from 'express';
 import db from '../utils/db.js';
 import { DateTime } from 'luxon';
 
-
 const router = express.Router();
 
-// GET raw entries (used by dashboard)
+// ✅ GET raw entries (used by dashboard)
 router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM clock_entries ORDER BY datetime_pst DESC');
@@ -17,10 +16,8 @@ router.get('/', async (req, res) => {
 });
 
 // ✅ GET summarized report
-
 router.get('/report', async (req, res) => {
   try {
-    const time = DateTime.fromISO(entry.datetime_pst, { zone: 'America/Los_Angeles' }).toISO();
     const result = await db.query(`
       SELECT 
         id,
@@ -41,7 +38,6 @@ router.get('/report', async (req, res) => {
     `);
 
     const rows = result.rows;
-
     const grouped = {};
 
     for (let row of rows) {
@@ -78,7 +74,6 @@ router.get('/report', async (req, res) => {
   }
 });
 
-
 // ✅ POST - Add a new entry
 router.post('/', async (req, res) => {
   try {
@@ -91,15 +86,16 @@ router.post('/', async (req, res) => {
       note
     } = req.body;
 
-    const dt = new Date(datetime);
-    const pst = new Date(dt.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    // Convert input datetime to Luxon object in PST
+    const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
+    const utcDate = dt.toUTC().toISO();
+    const pstDate = dt.toISO();
+    const day = dt.day;
+    const month = dt.month;
+    const year = dt.year;
+    const time = dt.toFormat('HH:mm');
 
-    const day = pst.getDate();
-    const month = pst.getMonth() + 1;
-    const year = pst.getFullYear();
-    const time = pst.toTimeString().split(' ')[0].slice(0, 5);
-
-    // Default pay rate if not found
+    // Get pay rate from latest worker record
     const payResult = await db.query(
       'SELECT pay_rate FROM workers WHERE name ILIKE $1 ORDER BY id DESC LIMIT 1',
       [worker_name]
@@ -114,9 +110,7 @@ router.post('/', async (req, res) => {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     `, [
       phone_number, worker_name, project_name, action,
-      new Date(dt).toISOString(),
-      pst.toISOString(),
-      day, month, year, time, note, payRate
+      utcDate, pstDate, day, month, year, time, note, payRate
     ]);
 
     res.status(200).send('Entry created');
