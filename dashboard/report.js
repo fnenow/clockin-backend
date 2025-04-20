@@ -7,6 +7,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("exportCSV").addEventListener("click", exportToCSV);
 });
 
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }); // e.g., "Apr 18, 2025"
+}
+
+
 async function fetchReportEntries() {
   try {
     const res = await fetch("/api/clock-entries/report");
@@ -61,7 +72,7 @@ function renderTable(entries) {
     tr.innerHTML = `
       <td>${row.worker_name}</td>
       <td>${row.phone_last5}</td>
-      <td>${row.date || ""}</td>
+      <td>${formatDate(row.date)}</td>
       <td>${row.project_name || ""}</td>
       <td>${row.clock_in || ""}</td>
       <td>${row.clock_out || ""}</td>
