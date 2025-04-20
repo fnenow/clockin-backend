@@ -6,6 +6,7 @@ import * as cheerio from 'cheerio';
 import db from './utils/db.js';
 import clockEntriesRoutes from './routes/clockEntries.js';
 import workersRoutes from './routes/workers.js';
+import payrollRoutes from './routes/payroll.js';
 
 
 const app  = express();
@@ -14,6 +15,7 @@ const port = process.env.PORT || 8080;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
+app.use('/api/payroll', payrollRoutes);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
