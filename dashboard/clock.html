@@ -1,20 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clock In via SMS</title>
+  <meta charset="UTF-8">
+  <title>Clock In/Out</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
       text-align: center;
-      padding: 2rem;
+      padding: 1.5rem;
+      background: #f5f5f5;
+    }
+    h2 {
+      color: #d32f2f;
+    }
+    label {
+      display: block;
+      margin: 0.5rem 0;
+    }
+    .radio-group {
+      margin: 1rem 0;
     }
     button {
-      font-size: 1.2rem;
-      padding: 1rem 2rem;
       background-color: #d32f2f;
       color: white;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -25,16 +36,32 @@
   </style>
 </head>
 <body>
-  <h2>Clock In</h2>
-  <p>Tap the button below to send your clock in SMS with current time.</p>
-  <button onclick="sendSMS()">Clock In</button>
+  <h2>Clock In/Out</h2>
+
+  <div class="radio-group">
+    <label><input type="radio" name="action" value="Clock In" checked> Clock In</label>
+    <label><input type="radio" name="action" value="Clock Out"> Clock Out</label>
+  </div>
+
+  <div class="radio-group">
+    <label><input type="radio" name="project" value="Cafe" checked> Cafe</label>
+    <label><input type="radio" name="project" value="Warehouse"> Warehouse</label>
+    <label><input type="radio" name="project" value="Office"> Office</label>
+  </div>
+
+  <button onclick="sendSMS()">Send SMS</button>
 
   <script>
     function sendSMS() {
+      const action = document.querySelector('input[name="action"]:checked').value;
+      const project = document.querySelector('input[name="project"]:checked').value;
       const now = new Date();
       const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const body = encodeURIComponent(`Note:\nClock In\nTime: ${timeStr}\nProject: Cafe`);
-      const smsLink = `sms:+17073871111?body=${body}`;
+
+      const message = `Note:\n${action}\nTime: ${timeStr}\nProject: ${project}`;
+      const smsBody = encodeURIComponent(message);
+      const smsLink = `sms:+17073871111?body=${smsBody}`;
+
       window.location.href = smsLink;
     }
   </script>
