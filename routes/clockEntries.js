@@ -20,22 +20,22 @@ router.get('/', async (req, res) => {
 router.get('/report', async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT 
-        id,
-        phone_number,
-        RIGHT(phone_number, 5) AS phone_last5,
-        worker_name,
-        project_name,
-        action,
-        TO_CHAR(datetime_pst::date, 'YYYY-MM-DD') AS date,
-        CASE WHEN action = 'Clock in' THEN datetime_pst END AS clock_in,
-        CASE WHEN action = 'Clock out' THEN datetime_pst END AS clock_out,
-        pay_rate,
-        regular_time,
-        overtime,
-        pay_amount
-      FROM clock_entries
-      ORDER BY worker_name, project_name, datetime_pst
+SELECT 
+  id,
+  phone_number,
+  RIGHT(phone_number, 5) AS phone_last5,
+  worker_name,
+  project_name,
+  action,
+  TO_CHAR(datetime_pst AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD') AS date,
+  CASE WHEN action = 'Clock in' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_in,
+  CASE WHEN action = 'Clock out' THEN TO_CHAR(datetime_pst, 'HH24:MI') END AS clock_out,
+  pay_rate,
+  regular_time,
+  overtime,
+  pay_amount
+FROM clock_entries
+ORDER BY worker_name, project_name, datetime_pst;
     `);
 
     const rows = result.rows;
