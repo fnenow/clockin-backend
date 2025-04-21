@@ -77,6 +77,7 @@ router.get('/report', async (req, res) => {
 });
 
 // ✅ POST - Add a new entry
+// ✅ POST - Add a new entry (fixing PST issue)
 router.post('/', async (req, res) => {
   try {
     const {
@@ -88,18 +89,17 @@ router.post('/', async (req, res) => {
       note
     } = req.body;
 
-    const dt = DateTime.fromISO(datetime, { zone: 'utc' });
-    const pst = dt.setZone('America/Los_Angeles');
+    // Parse input datetime (assumed local PST)
+    const dt = DateTime.fromISO(datetime, { zone: 'America/Los_Angeles' });
+    const pstDateTime = dt.setZone('America/Los_Angeles');
+    const utcDateTime = pstDateTime.toUTC();
 
-    const utcDateTime = dt.toUTC().toISO();         // for datetime_utc
-    const pstDateTime = pst.toISO();                // for datetime_pst
+    const day = pstDateTime.day;
+    const month = pstDateTime.month;
+    const year = pstDateTime.year;
+    const time = pstDateTime.toFormat('HH:mm');
 
-    const day = pst.day;
-    const month = pst.month;
-    const year = pst.year;
-    const time = pst.toFormat('HH:mm');
-
-    // Get latest pay rate
+    // Get pay rate from latest worker record
     const payResult = await db.query(
       'SELECT pay_rate FROM workers WHERE name ILIKE $1 ORDER BY id DESC LIMIT 1',
       [worker_name]
@@ -114,7 +114,7 @@ router.post('/', async (req, res) => {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     `, [
       phone_number, worker_name, project_name, action,
-      utcDateTime, pstDateTime,
+      utcDateTime.toISO(), pstDateTime.toISO(),
       day, month, year, time, note, payRate
     ]);
 
@@ -124,5 +124,6 @@ router.post('/', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 
 export default router;
