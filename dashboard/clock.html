@@ -43,12 +43,20 @@
     <label><input type="radio" name="action" value="Clock Out"> Clock Out</label>
   </div>
 
+  <h2></h2>
+  <h2>Project</h2>  
   <div class="radio-group">
     <label><input type="radio" name="project" value="Cafe" checked> Cafe</label>
     <label><input type="radio" name="project" value="Warehouse"> Warehouse</label>
     <label><input type="radio" name="project" value="Office"> Office</label>
   </div>
 
+  <h2></h2>
+  <h2>Notes</h2>  
+  <div class="note-group">
+    <label for="note">Note (optional):</label>
+    <input type="text" id="note" placeholder="e.g. Arrived late">
+  </div>
   <button onclick="sendSMS()">Send SMS</button>
 
   <script>
