@@ -1,75 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Clock In/Out</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: Arial, sans-serif;
+      padding: 30px;
       text-align: center;
-      padding: 1.5rem;
-      background: #f5f5f5;
+      background-color: #fdfdfd;
+      color: #333;
     }
+
     h2 {
-      color: #d32f2f;
+      color: #c00;
+      margin-top: 40px;
+      margin-bottom: 10px;
     }
+
     label {
       display: block;
-      margin: 0.5rem 0;
+      text-align: left;
+      margin: 5px 0;
     }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
     .radio-group {
-      margin: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-top: 10px;
     }
+
+    input[type="radio"] {
+      margin-right: 10px;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      width: 90%;
+      max-width: 300px;
+      margin-top: 10px;
+    }
+
     button {
-      background-color: #d32f2f;
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #d22;
       color: white;
-      padding: 1rem 2rem;
-      font-size: 1.1rem;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
     }
+
     button:hover {
-      background-color: #b71c1c;
+      background-color: #b00;
     }
   </style>
 </head>
 <body>
-  <h2>Clock In/Out</h2>
+  <form id="smsForm" onsubmit="sendSMS(event)">
+    <div class="section">
+      <h2>Clock In/Out</h2>
+      <div class="radio-group">
+        <label><input type="radio" name="action" value="Clock In" checked> Clock In</label>
+        <label><input type="radio" name="action" value="Clock Out"> Clock Out</label>
+      </div>
+    </div>
 
-  <div class="radio-group">
-    <label><input type="radio" name="action" value="Clock In" checked> Clock In</label>
-    <label><input type="radio" name="action" value="Clock Out"> Clock Out</label>
-  </div>
+    <div class="section">
+      <h2>Project</h2>
+      <div class="radio-group">
+        <label><input type="radio" name="project" value="Cafe" checked> Cafe</label>
+        <label><input type="radio" name="project" value="Warehouse"> Warehouse</label>
+        <label><input type="radio" name="project" value="Office"> Office</label>
+      </div>
+    </div>
 
-  <h2></h2>
-  <h2>Project</h2>  
-  <div class="radio-group">
-    <label><input type="radio" name="project" value="Cafe" checked> Cafe</label>
-    <label><input type="radio" name="project" value="Warehouse"> Warehouse</label>
-    <label><input type="radio" name="project" value="Office"> Office</label>
-  </div>
+    <div class="section">
+      <h2>Notes</h2>
+      <label for="note">Note (optional):</label>
+      <input type="text" id="note" name="note" placeholder="e.g. Arrived late" />
+    </div>
 
-  <h2></h2>
-  <h2>Notes</h2>  
-  <div class="note-group">
-    <label for="note">Note (optional):</label>
-    <input type="text" id="note" placeholder="e.g. Arrived late">
-  </div>
-  <button onclick="sendSMS()">Send SMS</button>
+    <button type="submit">Send SMS</button>
+  </form>
 
   <script>
-    function sendSMS() {
+    function sendSMS(e) {
+      e.preventDefault();
+
       const action = document.querySelector('input[name="action"]:checked').value;
       const project = document.querySelector('input[name="project"]:checked').value;
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const note = document.getElementById('note').value;
 
-      const message = `Note:\n${action}\nTime: ${timeStr}\nProject: ${project}`;
-      const smsBody = encodeURIComponent(message);
-      const smsLink = `sms:+17073871111?body=${smsBody}`;
+      let message = `Note:\n${action}\nProject: ${project}`;
+      if (note) message += `\nNote: ${note}`;
 
+      const phoneNumber = "+17073871111"; // Change to your receiving SMS number
+      const smsLink = `sms:${phoneNumber}?&body=${encodeURIComponent(message)}`;
       window.location.href = smsLink;
     }
   </script>
