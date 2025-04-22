@@ -22,6 +22,14 @@ app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')));
 app.use('/api/clock-entries', clockEntriesRoutes);
 app.use('/api/workers', workersRoutes);
 
+// ✅ This enables JSON body parsing
+app.use(express.json());
+
+// Then your routes
+app.post('/telegram-webhook', (req, res) => {
+  console.log(req.body); // ← You should be able to read incoming Telegram data here
+  res.sendStatus(200);
+});
 
 app.post('/email', async (req, res) => {
   try {
