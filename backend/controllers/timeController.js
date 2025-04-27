@@ -87,4 +87,4 @@ async function parseWebhook(req, res) {
   }
 }
 
-module.exports = { addEntry, getEntries, updateEntry, deleteEntry };
+module.exports = { addEntry, getEntries, updateEntry, deleteEntry, parseWebhook };
