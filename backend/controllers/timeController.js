@@ -48,5 +48,43 @@ async function deleteEntry(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+async function parseWebhook(req, res) {
+  try {
+    const body = req.body;
+
+    // Example: assuming you're forwarding SMS or email in a field like `message`
+    const message = body.message || '';
+
+    console.log('Received Webhook Message:', message);
+
+    // Basic parsing logic
+    const lines = message.split('\n');
+    const action = lines.find(l => l.includes('Clock')).trim();
+    const timeLine = lines.find(l => l.includes('Time:')).trim();
+    const projectLine = lines.find(l => l.includes('Project:')).trim();
+    const noteLine = lines.find(l => l.includes('Note:'))?.trim();
+
+    const clockTimeStr = timeLine.split('Time:')[1].trim();
+    const clockTime = new Date(clockTimeStr);
+
+    const projectName = projectLine.split('Project:')[1].trim();
+    const note = noteLine ? noteLine.split('Note:')[1].trim() : '';
+
+    const workerName = body.worker_name || 'Unknown'; // You can improve this with more parsing
+
+    // Insert into DB
+    const result = await db.query(
+      `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [workerName, projectName, clockTime, note]
+    );
+
+    res.status(200).json({ success: true, entry: result.rows[0] });
+
+  } catch (error) {
+    console.error('Webhook error:', error.message);
+    res.status(500).json({ error: 'Failed to process webhook' });
+  }
+}
 
 module.exports = { addEntry, getEntries, updateEntry, deleteEntry };
