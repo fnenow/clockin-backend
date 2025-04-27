@@ -50,29 +50,35 @@ async function deleteEntry(req, res) {
 }
 async function parseWebhook(req, res) {
   try {
-    const body = req.body;
+    const sender = req.body.sender || 'unknown@unknown.com';
+    const subject = req.body.subject || '';
+    const bodyPlain = req.body['body-plain'] || req.body['stripped-text'] || '';
 
-    // Example: assuming you're forwarding SMS or email in a field like `message`
-    const message = body.message || '';
+    console.log('Received from:', sender);
+    console.log('Subject:', subject);
+    console.log('Body:', bodyPlain);
 
-    console.log('Received Webhook Message:', message);
+    const lines = bodyPlain.split('\n');
 
-    // Basic parsing logic
-    const lines = message.split('\n');
-    const action = lines.find(l => l.includes('Clock')).trim();
-    const timeLine = lines.find(l => l.includes('Time:')).trim();
-    const projectLine = lines.find(l => l.includes('Project:')).trim();
-    const noteLine = lines.find(l => l.includes('Note:'))?.trim();
+    const actionLine = lines.find(l => l.includes('Clock'));
+    const timeLine = lines.find(l => l.includes('Time:'));
+    const projectLine = lines.find(l => l.includes('Project:'));
+    const noteLine = lines.find(l => l.includes('Note:'));
 
+    if (!actionLine || !timeLine || !projectLine) {
+      throw new Error('Missing required fields in the email');
+    }
+
+    const action = actionLine.trim();
     const clockTimeStr = timeLine.split('Time:')[1].trim();
-    const clockTime = new Date(clockTimeStr);
-
     const projectName = projectLine.split('Project:')[1].trim();
     const note = noteLine ? noteLine.split('Note:')[1].trim() : '';
 
-    const workerName = body.worker_name || 'Unknown'; // You can improve this with more parsing
+    const clockTime = new Date(clockTimeStr);
 
-    // Insert into DB
+    // Optional: worker_name = extract from email sender
+    const workerName = sender.split('@')[0]; // e.g., someone@domain.com -> someone
+
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
        VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -80,11 +86,11 @@ async function parseWebhook(req, res) {
     );
 
     res.status(200).json({ success: true, entry: result.rows[0] });
-
   } catch (error) {
     console.error('Webhook error:', error.message);
-    res.status(500).json({ error: 'Failed to process webhook' });
+    res.status(400).json({ error: error.message });
   }
 }
+
 
 module.exports = { addEntry, getEntries, updateEntry, deleteEntry, parseWebhook };
