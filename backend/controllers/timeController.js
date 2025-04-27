@@ -57,6 +57,10 @@ async function parseWebhook(req, res) {
     console.log('Received from:', sender);
     console.log('Subject:', subject);
     console.log('Body:', bodyPlain);
+    console.log('---- Incoming Webhook Body ----');
+    console.log(req.body);
+    console.log('--------------------------------');
+
 
     const lines = bodyPlain.split('\n');
 
