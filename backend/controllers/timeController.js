@@ -50,7 +50,6 @@ async function deleteEntry(req, res) {
   }
 }
 
-const db = require('../models/db');
 
 async function parseWebhook(req, res) {
   try {
