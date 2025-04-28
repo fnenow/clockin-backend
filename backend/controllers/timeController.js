@@ -58,14 +58,13 @@ async function deleteEntry(req, res) {
   }
 }
 
-// Parse webhook from Google Script
+
 async function parseWebhook(req, res) {
   try {
     console.log('---- Incoming Webhook from Google Script ----');
     console.log(JSON.stringify(req.body, null, 2));
     console.log('--------------------------------');
 
-    // 1. Validate payload
     if (!req.body || !req.body.text) {
       throw new Error('Invalid payload: missing "text" field');
     }
@@ -76,7 +75,6 @@ async function parseWebhook(req, res) {
     let phoneNumber = '';
     let messageContent = '';
 
-    // 2. Extract Phone Number and Message Content
     for (const line of lines) {
       if (line.startsWith('*From:*')) {
         const phoneMatch = line.match(/\((\d{3})\) (\d{3})-(\d{4})/);
@@ -96,7 +94,6 @@ async function parseWebhook(req, res) {
       throw new Error('Message content not found in email');
     }
 
-    // 3. Parse Clock In Time, Project, and Note inside the messageContent
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
     const noteMatch = messageContent.match(/Note:\s*(.+)/);
@@ -112,24 +109,30 @@ async function parseWebhook(req, res) {
     const projectName = projectMatch[1].trim();
     const note = noteMatch ? noteMatch[1].trim() : '';
 
+    if (!clockTimeStr || !projectName) {
+      throw new Error('Parsed Time or Project is missing or invalid.');
+    }
+
     const clockTime = new Date(clockTimeStr);
 
     if (isNaN(clockTime.getTime())) {
       throw new Error('Invalid clock-in time format');
     }
 
-    // For now, use phoneNumber as worker_name (can improve later)
     const workerName = phoneNumber;
 
-    // 4. Insert into Database (clock_out is NULL)
+    if (!workerName || !projectName || !clockTime) {
+      throw new Error('One of the required fields is missing before database insert.');
+    }
+
+    // FINAL: insert cleanly into db
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, clock_out, notes)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [workerName, projectName, clockTime, null, note]
+      [workerName, projectName, clockTime.toISOString(), null, note]
     );
 
     console.log('Clock entry inserted successfully:', result.rows[0]);
-
     res.status(200).json({ success: true, entry: result.rows[0] });
 
   } catch (error) {
@@ -137,6 +140,7 @@ async function parseWebhook(req, res) {
     res.status(400).json({ error: error.message });
   }
 }
+
 
 // Export all handlers
 module.exports = { 
