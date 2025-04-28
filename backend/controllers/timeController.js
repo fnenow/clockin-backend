@@ -58,7 +58,7 @@ async function deleteEntry(req, res) {
   }
 }
 
-
+// Parse webhook from Google Script
 async function parseWebhook(req, res) {
   try {
     console.log('---- Incoming Webhook from Google Script ----');
@@ -76,13 +76,13 @@ async function parseWebhook(req, res) {
     let messageContent = '';
 
     for (const line of lines) {
-      if (line.startsWith('*From:*')) {
+      if (line.startsWith('*From:*') && !phoneNumber) {
         const phoneMatch = line.match(/\((\d{3})\) (\d{3})-(\d{4})/);
         if (phoneMatch) {
           phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`;
         }
       }
-      if (line.startsWith('*Message:*')) {
+      if (line.startsWith('*Message:*') && !messageContent) {
         messageContent = line.replace('*Message:*', '').trim();
       }
     }
@@ -96,7 +96,6 @@ async function parseWebhook(req, res) {
 
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
-    const noteMatch = messageContent.match(/Note:\s*(.+)/);
 
     if (!timeMatch) {
       throw new Error('Clock In Time not found in message');
@@ -107,7 +106,6 @@ async function parseWebhook(req, res) {
 
     const clockTimeStr = timeMatch[1].trim();
     const projectName = projectMatch[1].trim();
-    const note = noteMatch ? noteMatch[1].trim() : '';
 
     if (!clockTimeStr || !projectName) {
       throw new Error('Parsed Time or Project is missing or invalid.');
@@ -119,13 +117,19 @@ async function parseWebhook(req, res) {
       throw new Error('Invalid clock-in time format');
     }
 
+    // 🔥 Improved Note extraction (multi-line)
+    const noteStart = messageContent.indexOf('Note:');
+    let note = '';
+    if (noteStart !== -1) {
+      note = messageContent.substring(noteStart + 5).trim(); // get everything after 'Note:'
+    }
+
     const workerName = phoneNumber;
 
     if (!workerName || !projectName || !clockTime) {
       throw new Error('One of the required fields is missing before database insert.');
     }
 
-    // FINAL: insert cleanly into db
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, clock_out, notes)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
@@ -141,12 +145,11 @@ async function parseWebhook(req, res) {
   }
 }
 
-
 // Export all handlers
-module.exports = { 
-  addEntry, 
-  getEntries, 
-  updateEntry, 
-  deleteEntry, 
-  parseWebhook 
+module.exports = {
+  addEntry,
+  getEntries,
+  updateEntry,
+  deleteEntry,
+  parseWebhook
 };
