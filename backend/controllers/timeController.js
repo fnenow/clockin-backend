@@ -48,7 +48,7 @@ async function deleteEntry(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
-import * as cheerio from 'cheerio'; // If you use ESM style imports
+const cheerio = require('cheerio'); // ✅ Correct
 
 async function parseWebhook(req, res) {
   try {
