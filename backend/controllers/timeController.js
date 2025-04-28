@@ -48,53 +48,67 @@ async function deleteEntry(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+import * as cheerio from 'cheerio'; // If you use ESM style imports
+
 async function parseWebhook(req, res) {
   try {
-    const sender = req.body.sender || 'unknown@unknown.com';
-    const subject = req.body.subject || '';
-    const bodyPlain = req.body['body-plain'] || req.body['stripped-text'] || '';
+    const body = req.body;
 
-    console.log('Received from:', sender);
-    console.log('Subject:', subject);
-    console.log('Body:', bodyPlain);
     console.log('---- Incoming Webhook Body ----');
-    console.log(req.body);
+    console.log(body);
     console.log('--------------------------------');
 
+    const subject = body.subject || '';
+    const strippedHtml = body['stripped-html'] || '';
 
-    const lines = bodyPlain.split('\n');
-
-    const actionLine = lines.find(l => l.includes('Clock'));
-    const timeLine = lines.find(l => l.includes('Time:'));
-    const projectLine = lines.find(l => l.includes('Project:'));
-    const noteLine = lines.find(l => l.includes('Note:'));
-
-    if (!actionLine || !timeLine || !projectLine) {
-      throw new Error('Missing required fields in the email');
+    if (!subject || !strippedHtml) {
+      throw new Error('Missing required fields from Mailgun');
     }
 
-    const action = actionLine.trim();
-    const clockTimeStr = timeLine.split('Time:')[1].trim();
-    const projectName = projectLine.split('Project:')[1].trim();
-    const note = noteLine ? noteLine.split('Note:')[1].trim() : '';
+    // 1. Extract phone number from subject
+    const phoneMatch = subject.match(/\((\d{3})\) (\d{3})-(\d{4})/);
+    const phoneNumber = phoneMatch ? `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}` : 'Unknown';
 
-    const clockTime = new Date(clockTimeStr);
+    // 2. Parse Project and Note from stripped-html
+    const $ = cheerio.load(strippedHtml);
 
-    // Optional: worker_name = extract from email sender
-    const workerName = sender.split('@')[0]; // e.g., someone@domain.com -> someone
+    const rawText = $('body').text(); // Get all text inside body
+    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let projectName = '';
+    let note = '';
+
+    for (const line of lines) {
+      if (line.startsWith('Project:')) {
+        projectName = line.replace('Project:', '').trim();
+      }
+      if (line.startsWith('Note:')) {
+        note = line.replace('Note:', '').trim();
+      }
+    }
+
+    if (!projectName) {
+      throw new Error('Project name not found');
+    }
+
+    const now = new Date(); // Use server time for now, or parse time if provided later
+
+    const workerName = phoneNumber; // You can later match phone number to real name
 
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [workerName, projectName, clockTime, note]
+      [workerName, projectName, now, note]
     );
 
     res.status(200).json({ success: true, entry: result.rows[0] });
+
   } catch (error) {
     console.error('Webhook error:', error.message);
     res.status(400).json({ error: error.message });
   }
 }
+
 
 
 module.exports = { addEntry, getEntries, updateEntry, deleteEntry, parseWebhook };
