@@ -48,74 +48,62 @@ async function deleteEntry(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
-const cheerio = require('cheerio'); // using CommonJS
+const db = require('../models/db'); // your db connection
 
 async function parseWebhook(req, res) {
   try {
     const body = req.body;
+    const rawText = body.text || '';
 
-    console.log('---- Incoming Webhook Body ----');
-    console.log(body);
+    console.log('---- Incoming Webhook from Google Script ----');
+    console.log(rawText);
     console.log('--------------------------------');
 
-    const subject = body.subject || '';
-    const strippedHtml = body['stripped-html'] || '';
-    const strippedText = body['stripped-text'] || '';
+    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
 
-    if (!subject) {
-      throw new Error('No subject received');
-    }
+    let phoneNumber = '';
+    let messageContent = '';
 
-    // 1. Extract phone number from subject
-    const phoneMatch = subject.match(/\((\d{3})\) (\d{3})-(\d{4})/);
-    const phoneNumber = phoneMatch ? `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}` : 'Unknown';
-
-    let projectName = '';
-    let note = '';
-
-    // 2. Prefer parsing from stripped-html if available
-    if (strippedHtml) {
-      const $ = cheerio.load(strippedHtml);
-      const rawText = $('body').text(); 
-      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
-
-      for (const line of lines) {
-        if (line.startsWith('Project:')) {
-          projectName = line.replace('Project:', '').trim();
+    for (const line of lines) {
+      if (line.startsWith('*From:*')) {
+        const phoneMatch = line.match(/\((\d{3})\) (\d{3})-(\d{4})/);
+        if (phoneMatch) {
+          phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`; // 10 digit number
         }
-        if (line.startsWith('Note:')) {
-          note = line.replace('Note:', '').trim();
-        }
+      }
+      if (line.startsWith('*Message:*')) {
+        messageContent = line.replace('*Message:*', '').trim();
       }
     }
 
-    // 3. If still no project found, try stripped-text (as backup)
-    if (!projectName && strippedText) {
-      const lines = strippedText.split('\n').map(l => l.trim()).filter(Boolean);
-
-      for (const line of lines) {
-        if (line.startsWith('Project:')) {
-          projectName = line.replace('Project:', '').trim();
-        }
-        if (line.startsWith('Note:')) {
-          note = line.replace('Note:', '').trim();
-        }
-      }
+    if (!phoneNumber) {
+      throw new Error('Phone number not found');
+    }
+    if (!messageContent) {
+      throw new Error('Message content not found');
     }
 
-    // 4. Validate parsed data
-    if (!projectName) {
-      console.log('No project found. Skipping this message.');
-      return res.status(200).json({ skipped: true, reason: 'No Project found' });
+    // Now parse inside the messageContent
+    const timeMatch = messageContent.match(/Time:\s*([\d\-T:]+)/);
+    const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
+    const noteMatch = messageContent.match(/Note:\s*(.+)/);
+
+    const clockTimeStr = timeMatch ? timeMatch[1].trim() : null;
+    const projectName = projectMatch ? projectMatch[1].trim() : null;
+    const note = noteMatch ? noteMatch[1].trim() : '';
+
+    if (!clockTimeStr || !projectName) {
+      throw new Error('Missing Time or Project in message');
     }
 
-    const now = new Date();
-    const workerName = phoneNumber; 
+    const clockTime = new Date(clockTimeStr);
+
+    const workerName = phoneNumber; // You can auto-match later
 
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [workerName, projectName, now, note]
+      [workerName, projectName, clockTime, note]
     );
 
     res.status(200).json({ success: true, entry: result.rows[0] });
