@@ -82,9 +82,8 @@ async function parseWebhook(req, res) {
           phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`;
         }
       }
-      // Always overwrite messageContent with last *Message:* line
       if (line.startsWith('*Message:*')) {
-        messageContent = line.replace('*Message:*', '').trim();
+        messageContent = line.replace('*Message:*', '').trim(); 
       }
     }
 
@@ -95,35 +94,36 @@ async function parseWebhook(req, res) {
       throw new Error('Message content not found in email');
     }
 
-    // Now inside messageContent, parse the real data
-    const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
-    const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
+    // 🔥 Improved parsing: split messageContent manually
+    let clockTimeStr = '';
+    let projectName = '';
+    let note = '';
 
-    if (!timeMatch) {
+    // Find "Time:" first
+    const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
+    if (timeMatch) {
+      clockTimeStr = timeMatch[1].trim();
+    } else {
       throw new Error('Clock In Time not found in message');
     }
-    if (!projectMatch) {
+
+    // Find where "Project:" starts and "Note:" starts
+    const projectStart = messageContent.indexOf('Project:');
+    const noteStart = messageContent.indexOf('Note:');
+
+    if (projectStart !== -1 && noteStart !== -1) {
+      projectName = messageContent.substring(projectStart + 8, noteStart).trim();
+      note = messageContent.substring(noteStart + 5).trim();
+    } else if (projectStart !== -1) {
+      projectName = messageContent.substring(projectStart + 8).trim();
+    } else {
       throw new Error('Project name not found in message');
-    }
-
-    const clockTimeStr = timeMatch[1].trim();
-    const projectName = projectMatch[1].trim();
-
-    if (!clockTimeStr || !projectName) {
-      throw new Error('Parsed Time or Project is missing or invalid.');
     }
 
     const clockTime = new Date(clockTimeStr);
 
     if (isNaN(clockTime.getTime())) {
       throw new Error('Invalid clock-in time format');
-    }
-
-    // 🔥 Multiline Note Handling
-    const noteStart = messageContent.indexOf('Note:');
-    let note = '';
-    if (noteStart !== -1) {
-      note = messageContent.substring(noteStart + 5).trim(); // Get everything after Note:
     }
 
     const workerName = phoneNumber;
