@@ -82,7 +82,8 @@ async function parseWebhook(req, res) {
           phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`;
         }
       }
-      if (line.startsWith('*Message:*') && !messageContent) {
+      // Always overwrite messageContent with last *Message:* line
+      if (line.startsWith('*Message:*')) {
         messageContent = line.replace('*Message:*', '').trim();
       }
     }
@@ -94,6 +95,7 @@ async function parseWebhook(req, res) {
       throw new Error('Message content not found in email');
     }
 
+    // Now inside messageContent, parse the real data
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
 
@@ -117,11 +119,11 @@ async function parseWebhook(req, res) {
       throw new Error('Invalid clock-in time format');
     }
 
-    // 🔥 Improved Note extraction (multi-line)
+    // 🔥 Multiline Note Handling
     const noteStart = messageContent.indexOf('Note:');
     let note = '';
     if (noteStart !== -1) {
-      note = messageContent.substring(noteStart + 5).trim(); // get everything after 'Note:'
+      note = messageContent.substring(noteStart + 5).trim(); // Get everything after Note:
     }
 
     const workerName = phoneNumber;
