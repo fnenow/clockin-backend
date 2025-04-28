@@ -1,4 +1,5 @@
 const db = require('../models/db');
+const cheerio = require('cheerio'); // optional if parsing HTML emails
 
 async function addEntry(req, res) {
   const { worker_name, project_name, clock_in, clock_out, notes } = req.body;
@@ -48,7 +49,6 @@ async function deleteEntry(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
-const db = require('../models/db'); // your db connection
 
 async function parseWebhook(req, res) {
   try {
