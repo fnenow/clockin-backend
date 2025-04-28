@@ -50,25 +50,32 @@ async function deleteEntry(req, res) {
   }
 }
 
+const db = require('../models/db');
+
 async function parseWebhook(req, res) {
   try {
-    const body = req.body;
-    const rawText = body.text || '';
-
     console.log('---- Incoming Webhook from Google Script ----');
-    console.log(rawText);
+    console.log(JSON.stringify(req.body, null, 2));
     console.log('--------------------------------');
 
-    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+    // 1. Validate payload
+    if (!req.body || !req.body.text) {
+      throw new Error('Invalid payload: missing "text" field');
+    }
+
+    const rawText = req.body.text;
+
+    const lines = rawText.split('\n').map(line => line.trim()).filter(Boolean);
 
     let phoneNumber = '';
     let messageContent = '';
 
+    // 2. Extract Phone Number and Message Content
     for (const line of lines) {
       if (line.startsWith('*From:*')) {
         const phoneMatch = line.match(/\((\d{3})\) (\d{3})-(\d{4})/);
         if (phoneMatch) {
-          phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`; // 10 digit number
+          phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`;
         }
       }
       if (line.startsWith('*Message:*')) {
@@ -77,34 +84,45 @@ async function parseWebhook(req, res) {
     }
 
     if (!phoneNumber) {
-      throw new Error('Phone number not found');
+      throw new Error('Phone number not found in email');
     }
     if (!messageContent) {
-      throw new Error('Message content not found');
+      throw new Error('Message content not found in email');
     }
 
-    // Now parse inside the messageContent
-    const timeMatch = messageContent.match(/Time:\s*([\d\-T:]+)/);
+    // 3. Parse Clock In Time, Project, and Note inside the messageContent
+    const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*(.+?)(?:Note:|$)/);
     const noteMatch = messageContent.match(/Note:\s*(.+)/);
 
-    const clockTimeStr = timeMatch ? timeMatch[1].trim() : null;
-    const projectName = projectMatch ? projectMatch[1].trim() : null;
-    const note = noteMatch ? noteMatch[1].trim() : '';
-
-    if (!clockTimeStr || !projectName) {
-      throw new Error('Missing Time or Project in message');
+    if (!timeMatch) {
+      throw new Error('Clock In Time not found in message');
     }
+    if (!projectMatch) {
+      throw new Error('Project name not found in message');
+    }
+
+    const clockTimeStr = timeMatch[1].trim();
+    const projectName = projectMatch[1].trim();
+    const note = noteMatch ? noteMatch[1].trim() : '';
 
     const clockTime = new Date(clockTimeStr);
 
-    const workerName = phoneNumber; // You can auto-match later
+    if (isNaN(clockTime.getTime())) {
+      throw new Error('Invalid clock-in time format');
+    }
 
+    // For now, use phoneNumber as worker_name
+    const workerName = phoneNumber;
+
+    // 4. Insert into Database
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
        VALUES ($1, $2, $3, $4) RETURNING *`,
       [workerName, projectName, clockTime, note]
     );
+
+    console.log('Clock entry inserted successfully:', result.rows[0]);
 
     res.status(200).json({ success: true, entry: result.rows[0] });
 
