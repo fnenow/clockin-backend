@@ -1,6 +1,7 @@
 const db = require('../models/db');
-const cheerio = require('cheerio'); // optional if parsing HTML emails
+const cheerio = require('cheerio'); // Optional for future HTML parsing
 
+// Add manual entry
 async function addEntry(req, res) {
   const { worker_name, project_name, clock_in, clock_out, notes } = req.body;
   try {
@@ -11,19 +12,23 @@ async function addEntry(req, res) {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error('Error adding entry:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
 
+// Get all clock entries
 async function getEntries(req, res) {
   try {
     const result = await db.query('SELECT * FROM clock_entries ORDER BY clock_in DESC');
     res.json(result.rows);
   } catch (err) {
+    console.error('Error getting entries:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
 
+// Update clock entry
 async function updateEntry(req, res) {
   const { id } = req.params;
   const { clock_in, clock_out, notes } = req.body;
@@ -36,21 +41,24 @@ async function updateEntry(req, res) {
     );
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('Error updating entry:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
 
+// Delete clock entry
 async function deleteEntry(req, res) {
   const { id } = req.params;
   try {
     await db.query('DELETE FROM clock_entries WHERE id = $1', [id]);
-    res.json({ message: 'Entry deleted' });
+    res.json({ message: 'Entry deleted successfully' });
   } catch (err) {
+    console.error('Error deleting entry:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
 
-
+// Parse webhook from Google Script
 async function parseWebhook(req, res) {
   try {
     console.log('---- Incoming Webhook from Google Script ----');
@@ -63,7 +71,6 @@ async function parseWebhook(req, res) {
     }
 
     const rawText = req.body.text;
-
     const lines = rawText.split('\n').map(line => line.trim()).filter(Boolean);
 
     let phoneNumber = '';
@@ -111,14 +118,14 @@ async function parseWebhook(req, res) {
       throw new Error('Invalid clock-in time format');
     }
 
-    // For now, use phoneNumber as worker_name
+    // For now, use phoneNumber as worker_name (can improve later)
     const workerName = phoneNumber;
 
-    // 4. Insert into Database
+    // 4. Insert into Database (clock_out is NULL)
     const result = await db.query(
-      `INSERT INTO clock_entries (worker_name, project_name, clock_in, notes)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [workerName, projectName, clockTime, note]
+      `INSERT INTO clock_entries (worker_name, project_name, clock_in, clock_out, notes)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [workerName, projectName, clockTime, null, note]
     );
 
     console.log('Clock entry inserted successfully:', result.rows[0]);
@@ -131,7 +138,11 @@ async function parseWebhook(req, res) {
   }
 }
 
-
-
-
-module.exports = { addEntry, getEntries, updateEntry, deleteEntry, parseWebhook };
+// Export all handlers
+module.exports = { 
+  addEntry, 
+  getEntries, 
+  updateEntry, 
+  deleteEntry, 
+  parseWebhook 
+};
