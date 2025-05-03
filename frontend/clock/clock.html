@@ -35,35 +35,35 @@
   <button onclick="sendSMS()">Send SMS</button>
 
   <script>
-    // Auto-set current local datetime
-    window.addEventListener('DOMContentLoaded', () => {
-      const now = new Date();
-      const offsetMs = now.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(now - offsetMs).toISOString().slice(0,16);
-      document.getElementById('clockTime').value = localISOTime;
-    });
+  // Auto-set current local datetime
+  window.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now - offsetMs).toISOString().slice(0,16);
+    document.getElementById('clockTime').value = localISOTime;
+  });
 
-    function sendSMS() {
-      const action = document.querySelector('input[name="action"]:checked').value;
-      const project = document.querySelector('input[name="project"]:checked').value;
-      const datetime = document.getElementById('clockTime').value;
-      const note = document.getElementById('note').value.trim();
+  function sendSMS() {
+    const action = document.querySelector('input[name="action"]:checked').value;
+    const project = document.querySelector('input[name="project"]:checked').value;
+    const datetime = document.getElementById('clockTime').value;
+    const note = document.getElementById('note').value.trim();
 
-      if (!datetime) {
-        alert("Please select a valid time.");
-        return;
-      }
-
-      let message = `${action}\nTime: ${datetime}\nProject: ${project}`;
-      if (note) {
-        message += `\nNote: ${note}`;
-      }
-
-      const number = "+17073871111";
-      const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
-
-      window.location.href = smsLink;
+    if (!datetime) {
+      alert("Please select a valid time.");
+      return;
     }
+
+    // 🟩 Wrap project and note values in single quotes
+    let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
+    if (note) {
+      message += `\nNote: '${note}'`;
+    }
+
+    const number = "+17073871111";
+    const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
+    window.location.href = smsLink;
+  }
   </script>
 </body>
 </html>
