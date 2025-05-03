@@ -83,54 +83,28 @@ async function parseWebhook(req, res) {
         }
       }
       if (line.startsWith('*Message:*')) {
-        messageContent = line.replace('*Message:*', '').trim(); 
+        messageContent = line.replace('*Message:*', '').trim();
       }
     }
 
-    if (!phoneNumber) {
-      throw new Error('Phone number not found in email');
-    }
-    if (!messageContent) {
-      throw new Error('Message content not found in email');
-    }
+    if (!phoneNumber) throw new Error('Phone number not found in email');
+    if (!messageContent) throw new Error('Message content not found in email');
 
-    // 🔥 Improved parsing: split messageContent manually
-    let clockTimeStr = '';
-    let projectName = '';
-    let note = '';
-
-    // Find "Time:" first
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
-    if (timeMatch) {
-      clockTimeStr = timeMatch[1].trim();
-    } else {
-      throw new Error('Clock In Time not found in message');
-    }
+    const projectMatch = messageContent.match(/Project:\s*'(.*?)'/);
+    const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/);
 
-    // Find where "Project:" starts and "Note:" starts
-    const projectStart = messageContent.indexOf('Project:');
-    const noteStart = messageContent.indexOf('Note:');
+    if (!timeMatch) throw new Error('Clock In Time not found in message');
+    if (!projectMatch) throw new Error('Project name not found in message');
 
-    if (projectStart !== -1 && noteStart !== -1) {
-      projectName = messageContent.substring(projectStart + 8, noteStart).trim();
-      note = messageContent.substring(noteStart + 5).trim();
-    } else if (projectStart !== -1) {
-      projectName = messageContent.substring(projectStart + 8).trim();
-    } else {
-      throw new Error('Project name not found in message');
-    }
+    const clockTimeStr = timeMatch[1].trim();
+    const projectName = projectMatch[1].trim();
+    const note = noteMatch ? noteMatch[1].trim() : '';
 
     const clockTime = new Date(clockTimeStr);
-
-    if (isNaN(clockTime.getTime())) {
-      throw new Error('Invalid clock-in time format');
-    }
+    if (isNaN(clockTime.getTime())) throw new Error('Invalid clock-in time format');
 
     const workerName = phoneNumber;
-
-    if (!workerName || !projectName || !clockTime) {
-      throw new Error('One of the required fields is missing before database insert.');
-    }
 
     const result = await db.query(
       `INSERT INTO clock_entries (worker_name, project_name, clock_in, clock_out, notes)
