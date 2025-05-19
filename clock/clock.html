@@ -15,12 +15,19 @@
     <label><input type="radio" name="action" value="Clock Out" /> Clock Out</label>
   </div>
 
-  <div class="group">
-    <div class="section-title">Project</div>
+<div class="group" id="project-group">
+  <div class="section-title">Project</div>
+  <div id="project-options">
     <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
     <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
     <label><input type="radio" name="project" value="Office" /> Office</label>
   </div>
+
+  <div style="margin-top: 8px;">
+    <input type="text" id="new-project" placeholder="Add new project..." />
+    <button type="button" onclick="addProject()">➕ Add</button>
+  </div>
+</div>
 
   <div class="group">
     <div class="section-title">Local Time</div>
