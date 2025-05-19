@@ -72,5 +72,24 @@
       window.location.href = smsLink;
     }
   </script>
+  <script>
+  function addProject() {
+    const newProjectInput = document.getElementById('new-project');
+    const projectName = newProjectInput.value.trim();
+    if (!projectName) return;
+
+    const projectOptions = document.getElementById('project-options');
+
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="radio" name="project" value="${projectName}" /> ${projectName}`;
+    projectOptions.appendChild(label);
+
+    // Auto-select the new one
+    label.querySelector('input').checked = true;
+
+    newProjectInput.value = '';
+  }
+  </script>
+
 </body>
 </html>
