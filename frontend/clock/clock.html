@@ -15,11 +15,19 @@
     <label><input type="radio" name="action" value="Clock Out" /> Clock Out</label>
   </div>
 
-  <div class="group">
+  <div class="group" id="project-group">
     <div class="section-title">Project</div>
-    <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
-    <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
-    <label><input type="radio" name="project" value="Office" /> Office</label>
+    <div id="project-options">
+      <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
+      <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
+      <label><input type="radio" name="project" value="Office" /> Office</label>
+    </div>
+
+    <!-- Admin-only input area, hidden by default -->
+    <div id="admin-controls" style="display: none; margin-top: 8px;">
+      <input type="text" id="new-project" placeholder="Add new project..." />
+      <button type="button" onclick="addProject()">➕ Add</button>
+    </div>
   </div>
 
   <div class="group">
@@ -33,37 +41,64 @@
   </div>
 
   <button onclick="sendSMS()">Send SMS</button>
+  <button onclick="unlockAdmin()" style="margin-left: 10px;">🔐 Admin</button>
 
   <script>
-  // Auto-set current local datetime
-  window.addEventListener('DOMContentLoaded', () => {
-    const now = new Date();
-    const offsetMs = now.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(now - offsetMs).toISOString().slice(0,16);
-    document.getElementById('clockTime').value = localISOTime;
-  });
+    // Auto-set current local datetime
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      const offsetMs = now.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(now - offsetMs).toISOString().slice(0,16);
+      document.getElementById('clockTime').value = localISOTime;
+    });
 
-  function sendSMS() {
-    const action = document.querySelector('input[name="action"]:checked').value;
-    const project = document.querySelector('input[name="project"]:checked').value;
-    const datetime = document.getElementById('clockTime').value;
-    const note = document.getElementById('note').value.trim();
+    function sendSMS() {
+      const action = document.querySelector('input[name="action"]:checked').value;
+      const project = document.querySelector('input[name="project"]:checked').value;
+      const datetime = document.getElementById('clockTime').value;
+      const note = document.getElementById('note').value.trim();
 
-    if (!datetime) {
-      alert("Please select a valid time.");
-      return;
+      if (!datetime) {
+        alert("Please select a valid time.");
+        return;
+      }
+
+      let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
+      if (note) {
+        message += `\nNote: '${note}'`;
+      }
+
+      const number = "+17073871111";
+      const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
+      window.location.href = smsLink;
     }
 
-    // 🟩 Wrap project and note values in single quotes
-    let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
-    if (note) {
-      message += `\nNote: '${note}'`;
+    function addProject() {
+      const newProjectInput = document.getElementById('new-project');
+      const projectName = newProjectInput.value.trim();
+      if (!projectName) return;
+
+      const projectOptions = document.getElementById('project-options');
+
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="radio" name="project" value="${projectName}" /> ${projectName}`;
+      projectOptions.appendChild(label);
+
+      label.querySelector('input').checked = true;
+      newProjectInput.value = '';
     }
 
-    const number = "+17073871111";
-    const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
-    window.location.href = smsLink;
-  }
+    function unlockAdmin() {
+      const pass = prompt("Enter admin passcode:");
+      const correctPass = "fne123"; // 🔐 Change this to your real passcode
+
+      if (pass === correctPass) {
+        document.getElementById('admin-controls').style.display = 'block';
+        alert("Admin mode unlocked.");
+      } else {
+        alert("Incorrect password.");
+      }
+    }
   </script>
 </body>
 </html>
