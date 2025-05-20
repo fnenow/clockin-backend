@@ -4,7 +4,12 @@
   <meta charset="UTF-8" />
   <title>FNEClock - Worker Clock In/Out</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    .group { margin-bottom: 1rem; }
+    label { display: inline-block; margin-right: 1rem; }
+    .section-title { font-weight: bold; margin-bottom: 0.5rem; }
+  </style>
 </head>
 <body>
   <h2>Clock In/Out</h2>
@@ -15,13 +20,9 @@
     <label><input type="radio" name="action" value="Clock Out" /> Clock Out</label>
   </div>
 
-  <div class="group" id="project-group">
+  <div class="group">
     <div class="section-title">Project</div>
-    <div id="project-options">
-      <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
-      <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
-      <label><input type="radio" name="project" value="Office" /> Office</label>
-    </div>
+    <div id="projectOptions">Loading...</div>
   </div>
 
   <div class="group">
@@ -37,36 +38,38 @@
   <button onclick="sendSMS()">Send SMS</button>
 
   <script>
-    // Auto-set current local datetime
-    window.addEventListener('DOMContentLoaded', () => {
-      const now = new Date();
-      const offsetMs = now.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(now - offsetMs).toISOString().slice(0,16);
-      document.getElementById('clockTime').value = localISOTime;
-    });
+    async function loadProjects() {
+      const container = document.getElementById('projectOptions');
+      try {
+        const res = await fetch('projects.json');
+        const projects = await res.json();
+        container.innerHTML = '';
+        projects.forEach((name, i) => {
+          const checked = i === 0 ? 'checked' : '';
+          container.innerHTML += `<label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>`;
+        });
+      } catch {
+        container.innerHTML = 'Failed to load project list.';
+      }
+    }
 
     function sendSMS() {
       const action = document.querySelector('input[name="action"]:checked').value;
-      const project = document.querySelector('input[name="project"]:checked').value;
+      const project = document.querySelector('input[name="project"]:checked')?.value;
       const datetime = document.getElementById('clockTime').value;
       const note = document.getElementById('note').value.trim();
-
-      if (!datetime) {
-        alert("Please select a valid time.");
-        return;
-      }
-
+      if (!datetime || !project) return alert("Please select time and project.");
       let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
-      if (note) {
-        message += `\nNote: '${note}'`;
-      }
-
-      const number = "+17073871111";
-      const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
-      window.location.href = smsLink;
+      if (note) message += `\nNote: '${note}'`;
+      window.location.href = `sms:+17073871111?&body=${encodeURIComponent(message)}`;
     }
 
-
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProjects();
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      document.getElementById('clockTime').value = new Date(now - offset).toISOString().slice(0, 16);
+    });
   </script>
 </body>
 </html>
