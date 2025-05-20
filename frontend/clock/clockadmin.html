@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Projects</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    input, button { padding: 6px; margin: 5px 0; }
+    li { margin: 0.5rem 0; }
+    .delete-btn { margin-left: 10px; background: red; color: white; border: none; }
+  </style>
+</head>
+<body>
+  <h2>Manage Projects</h2>
+
+  <input type="text" id="newProject" placeholder="New project name" />
+  <button onclick="addProject()">Add</button>
+  <ul id="projectList"></ul>
+  <button onclick="saveProjects()">Save</button>
+
+  <script>
+    let projects = [];
+
+    async function load() {
+      const res = await fetch('projects.json');
+      projects = await res.json();
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('projectList');
+      list.innerHTML = '';
+      projects.forEach((proj, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `${proj} <button class="delete-btn" onclick="remove(${i})">Delete</button>`;
+        list.appendChild(li);
+      });
+    }
+
+    function addProject() {
+      const input = document.getElementById('newProject');
+      const name = input.value.trim();
+      if (name && !projects.includes(name)) {
+        projects.push(name);
+        input.value = '';
+        render();
+      }
+    }
+
+    function remove(i) {
+      projects.splice(i, 1);
+      render();
+    }
+
+    function saveProjects() {
+      const blob = new Blob([JSON.stringify(projects, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'projects.json';
+      a.click();
+    }
+
+    load();
+  </script>
+</body>
+</html>
