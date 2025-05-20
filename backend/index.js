@@ -6,6 +6,8 @@ const port = process.env.PORT || 3000;
 const timeRoutes = require('./routes/timeRoutes');
 const workerRoutes = require('./routes/workerRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
+const projectSaver = require('./save-projects');
+app.use('/', projectSaver);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
