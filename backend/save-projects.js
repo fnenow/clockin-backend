@@ -4,7 +4,12 @@ const path = require('path');
 const router = express.Router();
 
 router.post('/frontend/clock/save-projects', (req, res) => {
+  console.log('Incoming save request');
+  console.log('Body:', req.body);
+  
   const filePath = path.join(__dirname, '..', 'frontend', 'clock', 'projects.json');
+  console.log('Saving to:', filePath);
+  
   fs.writeFile(filePath, JSON.stringify(req.body, null, 2), err => {
     if (err) {
       console.error('Failed to save projects.json:', err);
@@ -13,8 +18,6 @@ router.post('/frontend/clock/save-projects', (req, res) => {
     res.json({ success: true });
   });
 });
-console.log('Incoming save request');
-console.log('Body:', req.body);
-console.log('Saving to:', filePath);
+
 module.exports = router;
 
