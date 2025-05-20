@@ -4,7 +4,7 @@ const path = require('path');
 const router = express.Router();
 
 // This handles POST requests to /frontend/clock/save-projects
-router.post('/frontend/clock/save-projects', (req, res) => {
+router.post('/backend/save-projects', (req, res) => {
   const filePath = path.join(__dirname, '..', 'frontend', 'clock', 'projects.json');
   fs.writeFile(filePath, JSON.stringify(req.body, null, 2), err => {
     if (err) {
