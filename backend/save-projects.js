@@ -15,3 +15,6 @@ router.post('/frontend/clock/save-projects', (req, res) => {
 });
 
 module.exports = router;
+console.log('Incoming save request');
+console.log('Body:', req.body);
+console.log('Saving to:', filePath);
