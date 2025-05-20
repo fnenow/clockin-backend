@@ -15,19 +15,20 @@
     <label><input type="radio" name="action" value="Clock Out" /> Clock Out</label>
   </div>
 
-<div class="group" id="project-group">
-  <div class="section-title">Project</div>
-  <div id="project-options">
-    <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
-    <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
-    <label><input type="radio" name="project" value="Office" /> Office</label>
-  </div>
+  <div class="group" id="project-group">
+    <div class="section-title">Project</div>
+    <div id="project-options">
+      <label><input type="radio" name="project" value="Cafe" checked /> Cafe</label>
+      <label><input type="radio" name="project" value="Warehouse" /> Warehouse</label>
+      <label><input type="radio" name="project" value="Office" /> Office</label>
+    </div>
 
-  <div style="margin-top: 8px;">
-    <input type="text" id="new-project" placeholder="Add new project..." />
-    <button type="button" onclick="addProject()">➕ Add</button>
+    <!-- Admin-only input area, hidden by default -->
+    <div id="admin-controls" style="display: none; margin-top: 8px;">
+      <input type="text" id="new-project" placeholder="Add new project..." />
+      <button type="button" onclick="addProject()">➕ Add</button>
+    </div>
   </div>
-</div>
 
   <div class="group">
     <div class="section-title">Local Time</div>
@@ -40,6 +41,7 @@
   </div>
 
   <button onclick="sendSMS()">Send SMS</button>
+  <button onclick="unlockAdmin()" style="margin-left: 10px;">🔐 Admin</button>
 
   <script>
     // Auto-set current local datetime
@@ -61,33 +63,42 @@
         return;
       }
 
-      let message = `${action}\nTime: ${datetime}\nProject: ${project}`;
+      let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
       if (note) {
-        message += `\nNote: ${note}`;
+        message += `\nNote: '${note}'`;
       }
 
       const number = "+17073871111";
       const smsLink = `sms:${number}?&body=${encodeURIComponent(message)}`;
-
       window.location.href = smsLink;
     }
 
-      function addProject() {
-    const newProjectInput = document.getElementById('new-project');
-    const projectName = newProjectInput.value.trim();
-    if (!projectName) return;
+    function addProject() {
+      const newProjectInput = document.getElementById('new-project');
+      const projectName = newProjectInput.value.trim();
+      if (!projectName) return;
 
-    const projectOptions = document.getElementById('project-options');
+      const projectOptions = document.getElementById('project-options');
 
-    const label = document.createElement('label');
-    label.innerHTML = `<input type="radio" name="project" value="${projectName}" /> ${projectName}`;
-    projectOptions.appendChild(label);
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="radio" name="project" value="${projectName}" /> ${projectName}`;
+      projectOptions.appendChild(label);
 
-    // Auto-select the new one
-    label.querySelector('input').checked = true;
+      label.querySelector('input').checked = true;
+      newProjectInput.value = '';
+    }
 
-    newProjectInput.value = '';
-  }
+    function unlockAdmin() {
+      const pass = prompt("Enter admin passcode:");
+      const correctPass = "fne123"; // 🔐 Change this to your real passcode
+
+      if (pass === correctPass) {
+        document.getElementById('admin-controls').style.display = 'block';
+        alert("Admin mode unlocked.");
+      } else {
+        alert("Incorrect password.");
+      }
+    }
   </script>
 </body>
 </html>
