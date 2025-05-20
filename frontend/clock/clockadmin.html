@@ -52,12 +52,17 @@
       render();
     }
 
-    function saveProjects() {
-      const blob = new Blob([JSON.stringify(projects, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'projects.json';
-      a.click();
+    async function saveProjects() {
+      const res = await fetch('save-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projects)
+      });
+      if (res.ok) {
+        alert('Projects saved!');
+      } else {
+        alert('Failed to save.');
+      }
     }
 
     load();
