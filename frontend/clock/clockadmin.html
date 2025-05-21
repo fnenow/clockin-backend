@@ -51,19 +51,20 @@
       projects.splice(i, 1);
       render();
     }
-async function saveProjects() {
-  const res = await fetch('frontend/clock/save-projects', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(projects)
-  });
-  if (res.ok) {
-    alert('Projects saved!');
-  } else {
-    alert('Failed to save.');
-  }
-}
 
+  async function saveProjects() {
+    const res = await fetch('/frontend/clock/save-projects', {  // ✅ ABSOLUTE path
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(projects)
+    });
+
+    if (res.ok) {
+      alert('Projects saved!');
+    } else {
+      alert('❌ Failed to save.');
+    }
+  }
 
     load();
   </script>
