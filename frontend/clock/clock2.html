@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FNEClock - Worker Clock In/Out</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Clock In/Out</h2>
+
+  <div class="group">
+    <div class="section-title">Action</div>
+    <label><input type="radio" name="action" value="Clock In" checked /> Clock In</label>
+    <label><input type="radio" name="action" value="Clock Out" /> Clock Out</label>
+  </div>
+
+  <div class="group">
+    <div class="section-title">Project</div>
+    <div id="projectOptions">Loading...</div>
+  </div>
+
+  <div class="group">
+    <div class="section-title">Local Time</div>
+    <input type="datetime-local" id="clockTime" required />
+  </div>
+
+  <div class="group">
+    <div class="section-title">Notes (Optional)</div>
+    <input type="text" id="note" placeholder="e.g. Arrived late" maxlength="100" />
+  </div>
+
+  <button onclick="sendSMS()">Send SMS</button>
+
+  <script>
+    async function loadProjects() {
+      const container = document.getElementById('projectOptions');
+      try {
+        const res = await fetch('projects.json');
+        const projects = await res.json();
+        container.innerHTML = '';
+        projects.forEach((name, i) => {
+          const checked = i === 0 ? 'checked' : '';
+          container.innerHTML += `
+            <label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>
+          `;
+        });
+      } catch {
+        container.innerHTML = 'Failed to load project list.';
+      }
+    }
+
+    function sendSMS() {
+      const action = document.querySelector('input[name="action"]:checked').value;
+      const project = document.querySelector('input[name="project"]:checked')?.value;
+      const datetime = document.getElementById('clockTime').value;
+      const note = document.getElementById('note').value.trim();
+      if (!datetime || !project) return alert("Please select time and project.");
+      let message = `${action}\nTime: ${datetime}\nProject: '${project}'`;
+      if (note) message += `\nNote: '${note}'`;
+      window.location.href = `sms:+17073871111?&body=${encodeURIComponent(message)}`;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProjects();
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      document.getElementById('clockTime').value = new Date(now - offset).toISOString().slice(0, 16);
+    });
+  </script>
+</body>
+</html>
