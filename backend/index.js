@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const app = express();
 app.use(express.json());
@@ -6,7 +7,7 @@ const projectSaver = require('./save-projects');
 app.use('/', projectSaver);
 
 //style for clock.html
-const path = require('path');
+
 app.use('/clock', express.static(path.join(__dirname, '..', 'frontend', 'clock')));
 //end style for clock.html
 
