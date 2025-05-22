@@ -5,6 +5,11 @@ app.use(express.json());
 const projectSaver = require('./save-projects');
 app.use('/', projectSaver);
 
+//style for clock.html
+const path = require('path');
+app.use('/clock', express.static(path.join(__dirname, '..', 'frontend', 'clock')));
+//end style for clock.html
+
 const port = process.env.PORT || 3000;
 
 const timeRoutes = require('./routes/timeRoutes');
