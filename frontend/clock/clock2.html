@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <title>FNEClock - Worker Clock In/Out</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    .group { margin-bottom: 1rem; }
+    label { display: inline-block; margin-right: 1rem; }
+    .section-title { font-weight: bold; margin-bottom: 0.5rem; }
+  </style>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <h2>Clock In/Out</h2>
@@ -25,10 +31,10 @@
     <input type="datetime-local" id="clockTime" required />
   </div>
 
-  <div class="group">
-    <div class="section-title">Notes (Optional)</div>
-    <input type="text" id="note" placeholder="e.g. Arrived late" maxlength="100" />
-  </div>
+<div class="group full-width">
+  <div class="section-title">Notes (Optional)</div>
+  <textarea id="note" rows="4" placeholder="e.g. ..." maxlength="300"></textarea>
+</div>
 
   <button onclick="sendSMS()">Send SMS</button>
 
@@ -41,9 +47,7 @@
         container.innerHTML = '';
         projects.forEach((name, i) => {
           const checked = i === 0 ? 'checked' : '';
-          container.innerHTML += `
-            <label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>
-          `;
+          container.innerHTML += `<label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>`;
         });
       } catch {
         container.innerHTML = 'Failed to load project list.';
