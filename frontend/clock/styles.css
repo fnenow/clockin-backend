@@ -102,7 +102,7 @@ button:active {
   transform-origin: top left;
 }
 
-.group:not(.full-width) {
+/* .group:not(.full-width) {
   max-width: 500px;
   margin: auto;
-}
+} */
