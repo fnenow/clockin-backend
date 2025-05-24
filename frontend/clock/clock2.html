@@ -42,13 +42,13 @@
     async function loadProjects() {
       const container = document.getElementById('projectOptions');
       try {
-        const res = await fetch('projects.json');
+        const res = await fetch('/api/projects');
         const projects = await res.json();
         container.innerHTML = '';
-        projects.forEach((name, i) => {
-          const checked = i === 0 ? 'checked' : '';
-          container.innerHTML += `<label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>`;
+        projects.forEach(({ name }, i) => {
+        ...
         });
+
       } catch {
         container.innerHTML = 'Failed to load project list.';
       }
