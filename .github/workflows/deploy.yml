@@ -1,0 +1,42 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches:
+      - main  # or your deployment branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Get changed files in the last commit
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})" >> $GITHUB_ENV
+
+      # Optionally: Only deploy if certain files/directories changed
+      - name: Check if deploy is needed
+        id: check
+        run: |
+          if [[ "$CHANGED_FILES" == *"src/"* ]]; then
+            echo "deploy=true" >> $GITHUB_ENV
+          else
+            echo "deploy=false" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy to Railway
+        if: env.deploy == 'true'
+        uses: railwayapp/railway-action@v1
+        with:
+          railwayToken: ${{ secrets.RAILWAY_TOKEN }}
+          # Optionally specify project/service
