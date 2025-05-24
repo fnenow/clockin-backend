@@ -38,6 +38,20 @@ h2 {
   margin-right: -20px;
 }
 
+textarea {
+  width: 100vw;           /* full screen width */
+  max-width: none;        /* prevent container from limiting it */
+  font-size: 16px;
+  padding: 12px;
+  margin-left: -20px;     /* align with container padding */
+  margin-right: -20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  transition: border-color 0.3s;
+}
+
+
 label {
   display: flex;
   align-items: center;
