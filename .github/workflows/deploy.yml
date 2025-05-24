@@ -3,7 +3,7 @@ name: Deploy to Railway
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - main  # Change this to your deployment branch if needed
 
 jobs:
   deploy:
@@ -13,22 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      # Get changed files in the last commit
+      # Get changed files in the commit range
       - name: Get changed files
-        id: changed-files
+        id: diff
         run: |
-          echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})" >> $GITHUB_ENV
+          echo "CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})" >> $GITHUB_ENV
 
-      # Optionally: Only deploy if certain files/directories changed
-      - name: Check if deploy is needed
-        id: check
+      # Check if anything changed (always true on push, but explicit for clarity)
+      - name: Check if any files changed
+        id: any_check
         run: |
-          if [[ "$CHANGED_FILES" == *"src/"* ]]; then
+          if [ -n "$CHANGED" ]; then
             echo "deploy=true" >> $GITHUB_ENV
           else
             echo "deploy=false" >> $GITHUB_ENV
@@ -39,4 +34,4 @@ jobs:
         uses: railwayapp/railway-action@v1
         with:
           railwayToken: ${{ secrets.RAILWAY_TOKEN }}
-          # Optionally specify project/service
+          # Add your Railway project/service info here if needed
