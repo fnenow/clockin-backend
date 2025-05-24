@@ -101,3 +101,8 @@ button:active {
   transform: scale(0.25); /* Scale to 25% size */
   transform-origin: top left;
 }
+
+.group:not(.full-width) {
+  max-width: 500px;
+  margin: auto;
+}
