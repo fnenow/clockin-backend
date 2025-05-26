@@ -3,17 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <title>Manage Projects</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," /> <!-- Prevents 404 favicon.ico -->
   <link rel="stylesheet" href="styles.css" />
   <style>
-    ul { padding-left: 0; list-style: none; }
-    li { margin-bottom: 10px; }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 10px;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     .delete-btn {
-      margin-left: 10px;
       background: red;
       color: white;
       border: none;
       border-radius: 4px;
-      padding: 4px 8px;
+      padding: 6px 10px;
       font-size: 14px;
       cursor: pointer;
     }
@@ -30,39 +40,51 @@
 
   <script>
     async function loadProjects() {
-      const res = await fetch('/api/projects');
-      const data = await res.json();
-      const list = document.getElementById('projectList');
-      list.innerHTML = '';
-      data.forEach(p => {
-        const li = document.createElement('li');
-        li.innerHTML = \`\${p.name} <button class="delete-btn" onclick="deleteProject(\${p.id})">Delete</button>\`;
-        list.appendChild(li);
-      });
+      try {
+        const res = await fetch('/api/projects');
+        const data = await res.json();
+        const list = document.getElementById('projectList');
+        list.innerHTML = '';
+        data.forEach(p => {
+          const li = document.createElement('li');
+          li.innerHTML = `${p.name} <button class="delete-btn" onclick="deleteProject(${p.id})">Delete</button>`;
+          list.appendChild(li);
+        });
+      } catch (err) {
+        alert('Error loading projects');
+        console.error(err);
+      }
     }
 
     async function addProject() {
       const input = document.getElementById('newProject');
       const name = input.value.trim();
       if (!name) return alert('Please enter a name');
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      if (res.ok) {
+      try {
+        const res = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        if (!res.ok) throw new Error('Failed to add');
         input.value = '';
         loadProjects();
-      } else {
-        alert('Failed to add');
+      } catch (err) {
+        alert('Failed to add project');
+        console.error(err);
       }
     }
 
     async function deleteProject(id) {
       if (!confirm('Delete this project?')) return;
-      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
-      if (res.ok) loadProjects();
-      else alert('Failed to delete');
+      try {
+        const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete');
+        loadProjects();
+      } catch (err) {
+        alert('Failed to delete project');
+        console.error(err);
+      }
     }
 
     loadProjects();
