@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db'); // assumes db connection already set up
+const db = require('../models/db');
 
-// GET all projects
-router.get('/api/projects', async (req, res) => {
+// GET /api/projects
+router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM projects ORDER BY id');
     res.json(result.rows);
@@ -12,8 +12,8 @@ router.get('/api/projects', async (req, res) => {
   }
 });
 
-// POST new project
-router.post('/api/projects', async (req, res) => {
+// POST /api/projects
+router.post('/', async (req, res) => {
   const { name } = req.body;
   try {
     const result = await db.query(
@@ -26,8 +26,8 @@ router.post('/api/projects', async (req, res) => {
   }
 });
 
-// DELETE project
-router.delete('/api/projects/:id', async (req, res) => {
+// DELETE /api/projects/:id
+router.delete('/:id', async (req, res) => {
   try {
     await db.query('DELETE FROM projects WHERE id = $1', [req.params.id]);
     res.json({ message: 'Deleted' });
