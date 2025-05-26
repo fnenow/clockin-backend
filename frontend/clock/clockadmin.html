@@ -3,70 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <title>Manage Projects</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
-    input, button { padding: 6px; margin: 5px 0; }
-    li { margin: 0.5rem 0; }
-    .delete-btn { margin-left: 10px; background: red; color: white; border: none; }
+    ul { padding-left: 0; list-style: none; }
+    li { margin-bottom: 10px; }
+    .delete-btn {
+      margin-left: 10px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h2>Manage Projects</h2>
 
-  <input type="text" id="newProject" placeholder="New project name" />
-  <button onclick="addProject()">Add</button>
-  <ul id="projectList"></ul>
-  <button onclick="saveProjects()">Save</button>
+  <div class="group">
+    <input type="text" id="newProject" placeholder="New project name" />
+    <button onclick="addProject()">Add</button>
+    <ul id="projectList"></ul>
+  </div>
 
   <script>
-    let projects = [];
-
-    async function load() {
-      const res = await fetch('projects.json');
-      projects = await res.json();
-      render();
-    }
-
-    function render() {
+    async function loadProjects() {
+      const res = await fetch('/api/projects');
+      const data = await res.json();
       const list = document.getElementById('projectList');
       list.innerHTML = '';
-      projects.forEach((proj, i) => {
+      data.forEach(p => {
         const li = document.createElement('li');
-        li.innerHTML = `${proj} <button class="delete-btn" onclick="remove(${i})">Delete</button>`;
+        li.innerHTML = \`\${p.name} <button class="delete-btn" onclick="deleteProject(\${p.id})">Delete</button>\`;
         list.appendChild(li);
       });
     }
 
-    function addProject() {
+    async function addProject() {
       const input = document.getElementById('newProject');
       const name = input.value.trim();
-      if (name && !projects.includes(name)) {
-        projects.push(name);
+      if (!name) return alert('Please enter a name');
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
         input.value = '';
-        render();
+        loadProjects();
+      } else {
+        alert('Failed to add');
       }
     }
 
-    function remove(i) {
-      projects.splice(i, 1);
-      render();
+    async function deleteProject(id) {
+      if (!confirm('Delete this project?')) return;
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+      if (res.ok) loadProjects();
+      else alert('Failed to delete');
     }
 
-  async function saveProjects() {
-    const res = await fetch('/frontend/clock/save-projects', {  // ✅ ABSOLUTE path
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(projects)
-    });
-
-    if (res.ok) {
-      alert('Projects saved!');
-    } else {
-      alert('❌ Failed to save.');
-    }
-  }
-
-    load();
+    loadProjects();
   </script>
 </body>
 </html>
