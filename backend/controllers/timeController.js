@@ -74,6 +74,7 @@ async function parseWebhook(req, res) {
 
     let phoneNumber = '';
     let messageContent = '';
+    let insideMessage = false;
 
     for (const line of lines) {
       if (line.startsWith('*From:*') && !phoneNumber) {
@@ -82,29 +83,33 @@ async function parseWebhook(req, res) {
           phoneNumber = `${phoneMatch[1]}${phoneMatch[2]}${phoneMatch[3]}`;
         }
       }
+
       if (line.startsWith('*Message:*')) {
         messageContent += line.replace('*Message:*', '').trim() + '\n';
-      } else if (messageContent) {
-        messageContent += line + '\n'; // Continue appending multi-line message
+        insideMessage = true;
+      } else if (insideMessage) {
+        if (line.startsWith('*')) break; // end of message section
+        messageContent += line + '\n';
       }
     }
 
     if (!phoneNumber) throw new Error('Phone number not found in email');
     if (!messageContent) throw new Error('Message content not found in email');
 
+    // Extract values
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
-    const projectMatch = messageContent.match(/Project:\s*'(.*?)'/);
-    const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/); // ✅ multi-line safe
-    let note = noteMatch ? noteMatch[1].trim() : '';
-
-    // ✅ Log extracted note value
-    console.log('Extracted Note:', JSON.stringify(note));
+    const projectMatch = messageContent.match(/Project:\s*'([\s\S]*?)'/);
+    const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/); // multi-line safe
 
     if (!timeMatch) throw new Error('Clock In Time not found in message');
     if (!projectMatch) throw new Error('Project name not found in message');
 
     const clockTimeStr = timeMatch[1].trim();
     const projectName = projectMatch[1].trim();
+    const note = noteMatch ? noteMatch[1].trim() : '';
+
+    console.log('Extracted Note:', JSON.stringify(note));
+
     const clockTime = new Date(clockTimeStr);
     if (isNaN(clockTime.getTime())) throw new Error('Invalid clock-in time format');
 
@@ -124,6 +129,7 @@ async function parseWebhook(req, res) {
     res.status(400).json({ error: error.message });
   }
 }
+
 
 // Export all handlers
 module.exports = {
