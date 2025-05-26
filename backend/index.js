@@ -29,3 +29,5 @@ app.use('/api/payroll', payrollRoutes);
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+const projectRoutes = require('./routes/projectRoutes');
+app.use('/api/projects', projectRoutes);
