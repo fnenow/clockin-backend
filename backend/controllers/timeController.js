@@ -93,6 +93,8 @@ async function parseWebhook(req, res) {
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*'(.*?)'/);
     const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/);
+    const note = noteMatch ? noteMatch[1].trim() : '';
+
 
     if (!timeMatch) throw new Error('Clock In Time not found in message');
     if (!projectMatch) throw new Error('Project name not found in message');
