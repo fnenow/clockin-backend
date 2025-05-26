@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h2>Clock In / Out</h2>
+  <h2>Clock In/Out</h2>
 
   <div class="group">
     <div class="section-title">Action</div>
@@ -31,10 +31,10 @@
     <input type="datetime-local" id="clockTime" required />
   </div>
 
-<div class="group">
-  <div class="section-title">Notes (Optional)</div>
-  <textarea id="note" rows="4" placeholder="e.g. ..." maxlength="300"></textarea>
-</div>
+  <div class="group">
+    <div class="section-title">Notes (Optional)</div>
+    <textarea id="note" rows="4" placeholder="e.g. Arrived late, finished task, sent report..." maxlength="300"></textarea>
+  </div>
 
   <button onclick="sendSMS()">Send SMS</button>
 
@@ -42,13 +42,13 @@
     async function loadProjects() {
       const container = document.getElementById('projectOptions');
       try {
-        const res = await fetch('/api/projects');
+        const res = await fetch('projects.json');
         const projects = await res.json();
         container.innerHTML = '';
-        projects.forEach(({ name }, i) => {
-        ...
+        projects.forEach((name, i) => {
+          const checked = i === 0 ? 'checked' : '';
+          container.innerHTML += `<label><input type="radio" name="project" value="${name}" ${checked}/> ${name}</label>`;
         });
-
       } catch {
         container.innerHTML = 'Failed to load project list.';
       }
