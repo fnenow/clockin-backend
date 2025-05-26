@@ -83,7 +83,9 @@ async function parseWebhook(req, res) {
         }
       }
       if (line.startsWith('*Message:*')) {
-        messageContent = line.replace('*Message:*', '').trim();
+        messageContent += line.replace('*Message:*', '').trim() + '\n';
+      } else if (messageContent) {
+        messageContent += line + '\n'; // Continue appending multi-line message
       }
     }
 
@@ -92,17 +94,15 @@ async function parseWebhook(req, res) {
 
     const timeMatch = messageContent.match(/Time:\s*([0-9\-T:]+)/);
     const projectMatch = messageContent.match(/Project:\s*'(.*?)'/);
-    const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/);
-    const note = noteMatch ? noteMatch[1].trim() : '';
+    const noteMatch = messageContent.match(/Note:\s*'([\s\S]*?)'/); // ✅ multi-line safe
 
+    let note = noteMatch ? noteMatch[1].trim() : '';
 
     if (!timeMatch) throw new Error('Clock In Time not found in message');
     if (!projectMatch) throw new Error('Project name not found in message');
 
     const clockTimeStr = timeMatch[1].trim();
     const projectName = projectMatch[1].trim();
-    const note = noteMatch ? noteMatch[1].trim() : '';
-
     const clockTime = new Date(clockTimeStr);
     if (isNaN(clockTime.getTime())) throw new Error('Invalid clock-in time format');
 
