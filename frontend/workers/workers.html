@@ -1,12 +1,21 @@
-body {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-}
-h1 {
-  color: #333;
-}
-div {
-  margin-bottom: 15px;
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FNEClock - Workers</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Manage Workers</h1>
+  <form id="addWorkerForm">
+    <input type="text" id="workerName" placeholder="Name" required>
+    <input type="text" id="workerPhone" placeholder="Phone" required>
+    <input type="number" id="payRate" placeholder="Pay Rate" required>
+    <button type="submit">Add Worker</button>
+  </form>
+  <button onclick="loadWorkers()">Refresh</button>
+  <div id="workers"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
